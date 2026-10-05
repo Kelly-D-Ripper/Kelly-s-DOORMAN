@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Version>1.0.0</Version>
+    <NuGetAudit>false</NuGetAudit>
+    <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
+    <ManagedDir>$(GameDir)\NuclearOption_Data\Managed</ManagedDir>
+    <AssemblyName Condition="'$(ServerBuild)' != 'true'">KellysJOINCHECK</AssemblyName>
+    <AssemblyName Condition="'$(ServerBuild)' == 'true'">KellysJOINCHECKServer</AssemblyName>
+    <OutputPath>bin\$(Configuration)\$(AssemblyName)\</OutputPath>
+    <IntermediateOutputPath>obj\$(Configuration)\$(AssemblyName)\</IntermediateOutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\Diagnostics.cs" />
+    <Compile Include="src\Compatibility.cs" />
+    <Compile Include="src\ClientPlugin.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\JoinSummary.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeJoinUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\Favourites.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserHooks.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserQueryPatch.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserPresentation.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserIconGeometry.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\DrawnBrowserIcon.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserServerFilter.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserServerList.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BrowserDiscovery.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerPlugin.cs" Condition="'$(ServerBuild)' == 'true'" />
+    <Compile Include="src\Advertisement.cs" Condition="'$(ServerBuild)' == 'true'" />
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedDir)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="System.IO.Compression" HintPath="$(ManagedDir)\System.IO.Compression.dll" Private="false" />
+    <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedDir)\com.rlabrecque.steamworks.net.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedDir)\UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(ManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(ManagedDir)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(ManagedDir)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedDir)\Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ManagedDir)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="BepInEx" HintPath="$(GameDir)\BepInEx\core\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GameDir)\BepInEx\core\0Harmony.dll" Private="false" />
+  </ItemGroup>
+  <Target Name="ValidateGameReferences" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(ManagedDir)\Assembly-CSharp.dll')" Text="GameDir must point to an installed Nuclear Option game with BepInEx 5." />
+  </Target>
+</Project>

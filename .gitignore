@@ -1,0 +1,15 @@
+bin/
+obj/
+dist/
+evidence/
+tests/bin/
+tests/obj/
+.vs/
+.idea/
+*.user
+*.suo
+*.dll
+*.pdb
+*.cfg
+*.log
+*.zip

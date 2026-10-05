@@ -1,0 +1,122 @@
+{
+  "gameAssemblyHash": "EB3B93BDAEC37DD7B3BAB72F801A2C84E5BE2AE3C559F39251E2320AE6B11CCC",
+  "asset": "NuclearOption_Data/level2",
+  "scrollRoot": {
+    "m_GameObject": {
+      "m_FileID": 0,
+      "m_PathID": 18
+    },
+    "m_LocalRotation": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "w": 1.0
+    },
+    "m_LocalPosition": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "m_LocalScale": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0
+    },
+    "m_Children": [
+      {
+        "m_FileID": 0,
+        "m_PathID": 1658
+      },
+      {
+        "m_FileID": 0,
+        "m_PathID": 1612
+      }
+    ],
+    "m_Father": {
+      "m_FileID": 0,
+      "m_PathID": 1603
+    },
+    "m_AnchorMin": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "m_AnchorMax": {
+      "x": 1.0,
+      "y": 1.0
+    },
+    "m_AnchoredPosition": {
+      "x": 0.0,
+      "y": -22.5
+    },
+    "m_SizeDelta": {
+      "x": 0.0,
+      "y": -45.0
+    },
+    "m_Pivot": {
+      "x": 0.5,
+      "y": 0.5
+    }
+  },
+  "viewport": {
+    "m_GameObject": {
+      "m_FileID": 0,
+      "m_PathID": 59
+    },
+    "m_LocalRotation": {
+      "x": -0.0,
+      "y": -0.0,
+      "z": -0.0,
+      "w": 1.0
+    },
+    "m_LocalPosition": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    },
+    "m_LocalScale": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0
+    },
+    "m_Children": [
+      {
+        "m_FileID": 0,
+        "m_PathID": 1653
+      }
+    ],
+    "m_Father": {
+      "m_FileID": 0,
+      "m_PathID": 1618
+    },
+    "m_AnchorMin": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "m_AnchorMax": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "m_AnchoredPosition": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "m_SizeDelta": {
+      "x": 0.0,
+      "y": 0.0
+    },
+    "m_Pivot": {
+      "x": 0.0,
+      "y": 1.0
+    }
+  },
+  "rowLayout": [
+    "Image",
+    "LobbyListItem",
+    "HorizontalLayoutGroup",
+    "LayoutElement"
+  ],
+  "nameLayout": [
+    "VerticalLayoutGroup",
+    "LayoutElement"
+  ]
+}

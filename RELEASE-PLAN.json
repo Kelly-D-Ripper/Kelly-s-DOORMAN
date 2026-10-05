@@ -1,0 +1,23 @@
+{
+  "owner": "Kelly-D-Ripper",
+  "repository": "Kelly-s-DOORMAN",
+  "description": "Nuclear Option join diagnostics, incompatible-server browsing and saved favourites. Because error messages should contain information.",
+  "defaultBranch": "main",
+  "tag": "v1.0",
+  "title": "Kelly's DOORMAN 1.0",
+  "clientVersion": "1.0.0",
+  "serverVersion": "1.0.0",
+  "bodyFile": "RELEASE-NOTES.md",
+  "prerelease": false,
+  "acceptance": "Aaron confirmed the full 0.3.4 package works perfectly on 5 October 2026 and requested stable 1.0 publication. Code changes only plugin version labels.",
+  "assets": [
+    "dist/KellysDOORMAN-1.0.0-FULL.zip",
+    "dist/KellysDOORMAN-1.0.0-CLIENT.zip",
+    "dist/KellysDOORMAN-1.0.0-SERVER.zip",
+    "dist/KellysDOORMAN-1.0.0-SOURCE.zip",
+    "dist/SHA256SUMS.txt"
+  ],
+  "databaseImpact": "none",
+  "configurationImpact": "none; existing JOINCHECK plugin IDs, config and favourites retained",
+  "publicationStatus": "approved for stable publication"
+}
