@@ -8,15 +8,6 @@ using Mono.Cecil;
 
 namespace KellysJOINCHECK
 {
-    internal sealed class ModEntry
-    {
-        internal string Id="",Name="",Version="",Path="";
-        internal string AssemblyName="",WrapperPlugin="",WrapperPath="";
-        internal bool Content, Enabled, Wanted, Locked, PreviewAmbiguous;
-        internal ModManifest? Manifest;
-        internal string UpdateRepository="",UpdateAsset="",UpdatePlugin="",UpdatePath="",UpdateVersion="";
-        internal readonly List<string> Requires=new List<string>();
-    }
     internal static class ModCatalog
     {
         internal static List<ModEntry> Read(IEnumerable<InstalledContent> content,ModProfile profile,Action<string> log)

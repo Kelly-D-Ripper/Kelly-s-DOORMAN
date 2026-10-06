@@ -84,6 +84,7 @@ internal static class Program
         ServerCacheChecks();
         FavouriteChecks();
         SavedListRegression.Run(Check);
+        ModMenuRegression.Run(Check);
         InstalledContentRegression.Run(Check);
         MapFilesRegression.Run(Check);
         IconChecks();
@@ -192,12 +193,12 @@ internal static class Program
         Check(!serverPaths.Any(i=>i.Operand is MethodReference m && (m.Name=="get_version" || m.Name=="get_Wire" || (m.Name=="Expanded" && m.Parameters.Count==0))), "server does not repeatedly call the Blueprinter-patched version getter");
         Check(!Calls(host,"StartCoroutine") && !Calls(host,"InvokeRepeating"), "server does not schedule recurring work");
         Check(!hostTypes.SelectMany(t=>t.Methods).Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m && (m.DeclaringType.FullName.StartsWith("System.Net.") || m.DeclaringType.FullName.StartsWith("System.Threading."))), "server starts no threads, timers or extra network requests");
-        Check(client.Name.Version.ToString(3)=="1.3.4" && host.Name.Version.ToString(3)=="1.0.0", "client candidate retains the released server version");
+        Check(client.Name.Version.ToString(3)=="1.3.5" && host.Name.Version.ToString(3)=="1.0.0", "client candidate retains the released server version");
         var clientMetadata = client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         var serverMetadata = host.MainModule.GetType("KellysJOINCHECK.ServerPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         Check((string)clientMetadata[0].Value=="kelly.nuclearoption.joincheck" && (string)serverMetadata[0].Value=="kelly.nuclearoption.joincheck.server", "rename retains distinct legacy plugin IDs and existing config ownership");
         Check((string)clientMetadata[1].Value=="Kelly's DOORMAN" && (string)serverMetadata[1].Value=="Kelly's DOORMAN Server", "both displayed plugin names use the new branding");
-        Check((string)clientMetadata[2].Value=="1.3.4" && (string)serverMetadata[2].Value=="1.0.0", "BepInEx loader metadata matches each component's numeric version");
+        Check((string)clientMetadata[2].Value=="1.3.5" && (string)serverMetadata[2].Value=="1.0.0", "BepInEx loader metadata matches each component's numeric version");
         Check(!Diagnostics.Compare(server,local).Contains('\u2014'), "public diagnostics use plain punctuation");
         Check(!Calls(client, "set_version") && !Calls(host, "set_version"), "compatibility identifier not replaced");
         Check(Calls(client,"GetWorldCorners") && Calls(client,"GetPreferredValues"), "native docking and wrapping present");
@@ -249,6 +250,7 @@ internal static class Program
             &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ValidatePlugins")
             &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ApplySelection"),"saved lists use planning, menu/dependency checks and the existing reload/restart transaction");
         Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="PromptConfirmation"),"saved version differences require confirmation before list application");
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="NativeModsUi"&&m.Name=="Set"),"saved-list selection rebuilds visible rows so pending wrapper changes remain accessible after a cancelled restart");
         Check(client.MainModule.GetType("KellysJOINCHECK.NativeModsUi").Methods.Single(m=>m.Name=="ShowLists").Body.Instructions.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="NativeModListsUi"),"saved lists are attached to the existing native Mods UI");
         Check(!new[]{client.MainModule.GetType("KellysJOINCHECK.NativeModListsUi"),client.MainModule.GetType("KellysJOINCHECK.NativeModsUi"),listsManager}
             .SelectMany(t=>t.Methods.Where(m=>m.Name=="Tick")).SelectMany(m=>m.Body.Instructions)

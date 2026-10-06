@@ -11,6 +11,7 @@
     <Compile Remove="HookSmoke\**\*.cs" />
     <Compile Include="..\src\Diagnostics.cs" Link="Diagnostics.cs" />
     <Compile Include="..\src\ModData.cs" Link="ModData.cs" />
+    <Compile Include="..\src\ModMenuEntries.cs" Link="ModMenuEntries.cs" />
     <Compile Include="..\src\EmbeddedModPreview.cs" Link="EmbeddedModPreview.cs" />
     <Compile Include="..\src\NommMetadata.cs" Link="NommMetadata.cs" />
     <Compile Include="..\src\NommMetadataService.cs" Link="NommMetadataService.cs" />

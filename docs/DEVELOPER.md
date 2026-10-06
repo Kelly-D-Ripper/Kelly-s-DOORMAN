@@ -99,4 +99,4 @@ Use the .NET 8 SDK and an installed Nuclear Option with BepInEx 5 and Blueprinte
 ./Build-Package.ps1 -GameDir 'C:/path/to/Nuclear Option' -ServerArchive 'C:/downloads/KellysDOORMAN-1.0.0-SERVER.zip'
 ```
 
-Use `-DotnetPath` to select an SDK executable. The script builds the client and both helpers, runs regression/game-assembly checks, reuses the hash-verified server DLL, and writes packages plus SHA256SUMS to `dist/1.3.4`. It does not install anything or restart the game. Unity rendering and real multiplayer still need in-game checks.
+Use `-DotnetPath` to select an SDK executable. The script builds the client and both helpers, runs regression/game-assembly checks, reuses the hash-verified server DLL, and writes packages plus SHA256SUMS to `dist/1.3.5`. It does not install anything or restart the game. Unity rendering and real multiplayer still need in-game checks.

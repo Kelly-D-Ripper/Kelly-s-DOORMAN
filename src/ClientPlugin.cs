@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace KellysJOINCHECK
 {
-    [BepInPlugin(Id, "Kelly's DOORMAN", "1.3.4")]
+    [BepInPlugin(Id, "Kelly's DOORMAN", "1.3.5")]
     [BepInDependency("com.nikkorap.blueprinter", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
@@ -56,7 +56,7 @@ namespace KellysJOINCHECK
             Patch(typeof(JoinLobbyOverlay), "Open", nameof(OverlayPostfix), false);
             var auth = AccessTools.TypeByName("NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption");
             if (auth != null) Patch(auth, "HandleBuildHashMismatch", nameof(BuildPostfix), false);
-            Logger.LogInfo("DOORMAN 1.3.4 loaded. Native Maps tab, embedded map previews, saved mod lists and detached Steam restart helper.");
+            Logger.LogInfo("DOORMAN 1.3.5 loaded. Native Mods list groups active content with its supporting plugin; Maps, saved lists and detached Steam restart helper.");
         }
 
         private void PreserveRuntimeHost()

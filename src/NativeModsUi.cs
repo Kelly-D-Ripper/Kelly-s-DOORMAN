@@ -169,7 +169,7 @@ namespace KellysJOINCHECK
         }
         internal void Set(IReadOnlyList<ModEntry> value,bool matching,string message)
         {
-            entries=value; SetAutoMatch(matching); Status(message);
+            entries=ModMenuEntries.Visible(value); SetAutoMatch(matching); Status(message);
             foreach(var row in rows) UnityEngine.Object.Destroy(row); rows.Clear(); checks.Clear(); states.Clear();
             float y=0;
             foreach(var item in entries)
@@ -181,7 +181,7 @@ namespace KellysJOINCHECK
                 var state=Text("State",chooseRect,16); Top(state.rectTransform,8,44,-12,26); state.color=LobbyListItem.TextMutedColor; states.Add(item,state);
                 rows.Add(row.gameObject); y+=90;
             }
-            listContent.sizeDelta=new Vector2(0,y);RefreshSelection();var next=selected!=null&&value.Contains(selected)?selected:entries.Count>0?entries[0]:null;if(mapstab)selected=next;else Select(next);
+            listContent.sizeDelta=new Vector2(0,y);RefreshSelection();var next=selected!=null&&entries.Contains(selected)?selected:entries.Count>0?entries[0]:null;if(mapstab)selected=next;else Select(next);
         }
         internal void SetAutoMatch(bool value)=>autoMatch.SetIsOnWithoutNotify(value);
         internal void RefreshPreview(ModEntry item) { if(!mapstab&&selected==item)Select(item); }

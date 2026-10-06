@@ -202,7 +202,7 @@ namespace KellysJOINCHECK
                 for(int i=0;i<entries.Count;i++) entries[i].Wanted=old[i];
                 ui.ListsStatus(reason+" No mod selections were changed.");return;
             }
-            ui.RefreshSelection();ui.HideLists();
+            ui.Set(entries,profile.AutoMatchServers,"Saved list selected. Reload mods to apply.");ui.HideLists();
             // This is the same transaction as Reload mods, including update queues,
             // mission checks, rollback and an explicit restart confirmation.
             listDisabledContent=plan.DisabledContent;ApplySelection();

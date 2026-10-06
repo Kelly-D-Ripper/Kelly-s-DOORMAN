@@ -5,8 +5,8 @@ param(
     [string]$OutputDir = ''
 )
 $ErrorActionPreference = 'Stop'
-$version = '1.3.4'
-$packageVersion = '1.3.4'
+$version = '1.3.5'
+$packageVersion = '1.3.5'
 $workspace = Split-Path $PSScriptRoot -Parent
 if (!$DotnetPath) {
     $bundled = Join-Path $workspace '.tools\dotnet-sdk\dotnet.exe'
@@ -98,7 +98,7 @@ $sourceNames += @('tests/PreviewChecks.cs')
 $sourceNames += @('tests/SavedListChecks.cs','tests/InstalledContentChecks.cs')
 $sourceNames += @('tests/MapFilesTests.cs','tests/MapBridgeChecks.cs')
 $sourceNames += @('metadata/client/doorman.json','tests/DoormanManifestChecks.cs')
-$sourceNames += @('tests/ScrollbarChecks.cs')
+$sourceNames += @('tests/ScrollbarChecks.cs','tests/ModMenuChecks.cs')
 if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'metadata/client/doorman.png')) { $sourceNames += 'metadata/client/doorman.png' }
 $sourceFiles = @($sourceNames | ForEach-Object { @{ From=(Join-Path $PSScriptRoot $_); To=$_ } })
 $artifacts += New-VerifiedPackage "KellysDOORMAN-$packageVersion-SOURCE" $sourceFiles
@@ -114,9 +114,9 @@ $record = [ordered]@{
     configurationImpact='Maps view is read-only with a scoped OS watcher and no persisted settings or cache. Existing configs/favourites preserved; no server settings changed. Explicit saved-list actions create portable JSON and backups in BepInEx/plugins/DOORMAN-Lists and a local hash-bound content receipt in BepInEx/cache/doorman-content-inventory.json. Loading uses the existing normal profile/reload/restart transaction. Return tickets and other caches retain their documented behavior. Explicit ZIP updates may install plugin-bound JSON/images under BepInEx/plugins/DOORMAN-Metadata with per-file queue hashes/backups; legacy DLL-only queues remain readable. No bundled sample previews/images or player list files.'
     regressionChecks=[int]$match.Groups[1].Value
     installed=$false; published=$false; remotelyStaged=$false
-    priorInGameObservation='Aaron confirmed all 1.3.3 features worked in game on 6 October 2026: saved lists, Maps, scrollbars, a mod update and restart back to a server. The 1.3.4 audit fixes need focused in-game cancellation/retry, repeated setup and recovery checks; no 1.3.4 installation or restart was performed by this build.'
+    priorInGameObservation='Aaron confirmed all 1.3.3 features worked in game on 6 October 2026: saved lists, Maps, scrollbars, a mod update and restart back to a server. The observed 1.3.4 log shows the embedded Eclipse JSON test working and one installed wrapper DLL per Shrike/Eclipse. Version 1.3.5 hides redundant active supporting-plugin rows in the menu; focused in-game display/recovery, cancellation/retry and repeated setup checks remain pending. This build did not install or restart the game.'
     detachedLaunchProbe=if(Test-Path -LiteralPath (Join-Path $evidence 'explorer-parent-probe.json')) {Get-Content -LiteralPath (Join-Path $evidence 'explorer-parent-probe.json') -Raw | ConvertFrom-Json} else {$null}
-    inGameAcceptance='1.3.3 feature acceptance confirmed by Aaron; 1.3.4 focused smoke check pending. Broader stress coverage remains unrecorded: all ten permanent scrollbar tracks/thumbs, wheel/drag/track clicks, wrapping, nested views and scaling; Maps tab scaling/default chart/embedded assets, add/change/remove notices, unsupported loader, async close/refresh and watcher cleanup; 1.3.4 saved-list UI/save/load/share, typing/scaling, missing/version warnings, dependency conflicts, cached disabled wrapper recovery and cancelled restarts; embedded previews on disabled wrappers, sidecar ZIP update and raw-DLL transition, manual overrides, interrupted per-file recovery; cancellation recovery restores Mods controls after closing/reopening during verification/bootstrap; repeated restart and broker timeout/plugin disposal; Steam session-release wait and bounded retry fallback, late/manual launch without duplicate dispatch; disabled content/wrapper images and custom plugin-only previews; Windows status UI/focus/DPI/cleanup; ordinary launch restores the saved profile and preserves unrelated client plugins; downloaded F-16 update through restart and actual Join; vanilla/modded/passworded joins, repeated A -> B -> A hot reload networking, NOMNOM fallback, clean install/upgrade and busy-mission runtime performance'
+    inGameAcceptance='1.3.3 feature acceptance confirmed by Aaron; 1.3.5 visible row grouping and disabled-wrapper recovery smoke checks pending. Broader stress coverage remains unrecorded: all ten permanent scrollbar tracks/thumbs, wheel/drag/track clicks, wrapping, nested views and scaling; Maps tab scaling/default chart/embedded assets, add/change/remove notices, unsupported loader, async close/refresh and watcher cleanup; saved-list UI/save/load/share, typing/scaling, missing/version warnings, dependency conflicts, cached disabled wrapper recovery and cancelled restarts; embedded previews on disabled wrappers, sidecar ZIP update and raw-DLL transition, manual overrides, interrupted per-file recovery; cancellation recovery restores Mods controls after closing/reopening during verification/bootstrap; repeated restart and broker timeout/plugin disposal; Steam session-release wait and bounded retry fallback, late/manual launch without duplicate dispatch; disabled content/wrapper images and custom plugin-only previews; Windows status UI/focus/DPI/cleanup; ordinary launch restores the saved profile and preserves unrelated client plugins; downloaded F-16 update through restart and actual Join; vanilla/modded/passworded joins, repeated A -> B -> A hot reload networking, NOMNOM fallback, clean install/upgrade and busy-mission runtime performance'
 }
 $record | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $dist 'BUILD-RECORD.json') -Encoding utf8
 Write-Output "Candidate packages: $dist"

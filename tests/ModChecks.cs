@@ -130,6 +130,10 @@ internal static partial class ModRegression
         var read=catalog.Methods.Single(m=>m.Name=="Read").Body.Instructions;
         check(read.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.FullName=="KellysJOINCHECK.ModManifest"&&m.Name=="Match")&&read.Any(i=>i.Operand is FieldReference f&&f.Name=="WrapperPlugin"),"catalog preview lookup passes the wrapper identity discovered from installed DLLs");
         check(!read.Any(i=>i.Operand is FieldReference f&&f.Name=="Instance"||i.Operand is MethodReference m&&m.Name=="get_Instance"),"preview attachment does not require a loaded plugin instance");
+        var menuSet=client.MainModule.GetType("KellysJOINCHECK.NativeModsUi").Methods.Single(m=>m.Name=="Set").Body.Instructions;
+        check(menuSet.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.FullName=="KellysJOINCHECK.ModMenuEntries"&&m.Name=="Visible"),"the compiled native menu uses the tested wrapper-row projection");
+        var managerRefresh=client.MainModule.GetType("KellysJOINCHECK.ModManager").Methods.Single(m=>m.Name=="Refresh").Body.Instructions;
+        check(managerRefresh.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.FullName=="KellysJOINCHECK.ModCatalog"&&m.Name=="Read")&&!managerRefresh.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.FullName=="KellysJOINCHECK.ModMenuEntries"),"UI grouping leaves the manager's complete catalog available to dependencies, updates and saved lists");
         var enrichFilter=AllTypes(new[]{catalog}).SelectMany(t=>t.Methods).Where(m=>m.Name.StartsWith("<Enrich>")&&m.HasBody).SelectMany(m=>m.Body.Instructions).ToArray();
         check(enrichFilter.Any(i=>i.Operand is FieldReference f&&f.Name=="Manifest")&&enrichFilter.Any(i=>i.Operand is FieldReference f&&f.Name=="PreviewAmbiguous"),"NOMNOM enrichment respects existing previews and ambiguous custom identities");
     }
