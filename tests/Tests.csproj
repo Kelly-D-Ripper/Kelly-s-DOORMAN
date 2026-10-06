@@ -10,6 +10,26 @@
     <None Update="NativeBrowserLayout.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Remove="HookSmoke\**\*.cs" />
     <Compile Include="..\src\Diagnostics.cs" Link="Diagnostics.cs" />
+    <Compile Include="..\src\ModData.cs" Link="ModData.cs" />
+    <Compile Include="..\src\EmbeddedModPreview.cs" Link="EmbeddedModPreview.cs" />
+    <Compile Include="..\src\NommMetadata.cs" Link="NommMetadata.cs" />
+    <Compile Include="..\src\NommMetadataService.cs" Link="NommMetadataService.cs" />
+    <Compile Include="..\src\ServerSetupData.cs" Link="ServerSetupData.cs" />
+    <Compile Include="..\src\SavedModLists.cs" Link="SavedModLists.cs" />
+    <Compile Include="..\src\MapFiles.cs" Link="MapFiles.cs" />
+    <Compile Include="..\src\InstalledContentMetadata.cs" Link="InstalledContentMetadata.cs" />
+    <Compile Include="..\src\RestartStatus.cs" Link="RestartStatus.cs" />
+    <Compile Include="..\restart\RestartLaunchPolicy.cs" Link="RestartLaunchPolicy.cs" />
+    <Compile Include="..\restart\SteamSessionState.cs" Link="SteamSessionState.cs" />
+    <Compile Include="..\restart\RestartProcessFamily.cs" Link="RestartProcessFamily.cs" />
+    <Compile Include="..\src\MenuScene.cs" Link="MenuScene.cs" />
+    <Compile Include="..\src\ModUpdateData.cs" Link="ModUpdateData.cs" />
+    <Compile Include="..\src\ModUpdateFiles.cs" Link="ModUpdateFiles.cs" />
+    <Compile Include="..\src\ModUpdateService.cs" Link="ModUpdateService.cs" />
+    <Compile Include="..\startup\DoormanStartupPatch.cs" Link="DoormanStartupPatch.cs" />
+    <Compile Include="..\startup\DoormanRuntimeHost.cs" Link="DoormanRuntimeHost.cs" />
+    <Compile Include="..\src\ModStateSnapshot.cs" Link="ModStateSnapshot.cs" />
+    <Compile Include="..\src\ModImageHeader.cs" Link="ModImageHeader.cs" />
     <Compile Include="..\src\JoinSummary.cs" Link="JoinSummary.cs" />
     <Compile Include="..\src\Advertisement.cs" Link="Advertisement.cs" />
     <Compile Include="..\src\Favourites.cs" Link="Favourites.cs" />

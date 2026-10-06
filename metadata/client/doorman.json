@@ -1,0 +1,19 @@
+{
+  "plugin": "kelly.nuclearoption.joincheck",
+  "name": "Kelly's DOORMAN",
+  "author": "Kelly D. Ripper",
+  "description": "\"Incorrect version\" is not an instruction. DOORMAN tells you which mods are missing, wrong or extra.\n\nUse Mods to switch installed packs, save and share mod lists, and check GitHub updates. Browse custom Maps and their embedded previews. Show incompatible servers, save favourites, and use Setup mods before joining. Supported content reloads from the menus; plugin changes and downloaded updates need a restart. DOORMAN waits for loading and returns you to your selected server. Copy report shares the diagnosis; F8 reopens it.\n\nUpgrade DOORMAN using the complete CLIENT or FULL package. Its startup and restart helpers need to match the client DLL. Computers remain inconvenient.",
+  "links": [
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Kelly-D-Ripper/Kelly-s-DOORMAN"
+    },
+    {
+      "label": "Downloads",
+      "url": "https://github.com/Kelly-D-Ripper/Kelly-s-DOORMAN/releases"
+    }
+  ],
+  "update": {
+    "repository": "Kelly-D-Ripper/Kelly-s-DOORMAN"
+  }
+}

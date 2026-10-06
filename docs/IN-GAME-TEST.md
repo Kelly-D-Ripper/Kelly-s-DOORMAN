@@ -1,5 +1,7 @@
 # DOORMAN 1.0 game check
 
+Archived baseline checklist. The 1.3.4 candidate uses [MODS-TEST.md](MODS-TEST.md). Aaron confirmed the 1.3.3 features worked; the audit fixes have a focused check in [RELEASE-AUDIT.md](RELEASE-AUDIT.md).
+
 Status: Aaron confirmed the full 0.3.4 package works perfectly on 5 October 2026 and requested stable 1.0 publication. Both components now report 1.0.0, with version-label changes only. Aaron's earlier screenshot shows the rendered tick, favourite stars and both dedicated and hosted results. The unchanged discovery source previously passed three read-only Steam refreshes with 119 responding dedicated servers each, then passed again after disposal/reopening. The cases below remain a regression checklist, not a claim of individually recorded execution. No managed-server deployment or restart has been performed.
 
 1. Replace the single client DLL and restart. Verify the log loads DOORMAN 1.0.0 and logs "Browser controls attached above the native list" when opening the browser. The filter bar and label backgrounds should blend into the existing browser backdrop, with neutral charcoal checkbox squares and the native green tick. Click both the square and label to confirm the invisible label hit area still works. At the original 3440x1440 resolution, verify the two checkboxes sit above the server rows and the list remains scrollable. The small collapsed square at the bottom-left must be gone. Repeat at 1920x1080 and 1280x720; text, checkbox hit regions, stars and native columns should fit without covering other controls.

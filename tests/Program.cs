@@ -20,8 +20,8 @@ internal static class Program
     private static string Read(Dictionary<string,string> data, string key) => data.TryGetValue(key, out var value) ? value : "";
     private static int Main(string[] args)
     {
-        string server = V("--Aryx_F99-v1.1.3_--MiG-15-v1.1.2_--Weapons-v1.1.1");
-        string local = V("--Aryx_F99-v1.1.2_--Chimera-v1.2.0_--Weapons-v1.1.1");
+        string server = V("--Aryx_F99-v1.1.3_--MiG-15-v1.2.0_--Weapons-v1.2.0");
+        string local = V("--Aryx_F99-v1.2.0_--Chimera-v1.2.0_--Weapons-v1.2.0");
         string result = Diagnostics.Compare(server, local);
         Check(result.Contains("MISSING: MiG-15"), "missing bundle");
         Check(result.Contains("WRONG VERSION: Aryx_F99"), "underscore name and wrong version");
@@ -41,8 +41,8 @@ internal static class Program
         var checklist = JoinSummary.Create(server, local, server, local, "");
         Check(checklist.Status == JoinStatus.Changes && checklist.Actions.Count == 3, "only three actionable differences in checklist");
         Check(checklist.Title == "3 changes needed", "plain summary count");
-        Check(checklist.Actions.Any(x => x.Action == "INSTALL" && x.Name == "MiG-15" && x.Instruction.Contains("1.1.2")), "missing checklist action");
-        Check(checklist.Actions.Any(x => x.Action == "CHANGE VERSION" && x.Name == "Aryx F99" && x.Instruction.Contains("1.1.3") && x.Instruction.Contains("1.1.2")), "friendly name and both versions");
+        Check(checklist.Actions.Any(x => x.Action == "INSTALL" && x.Name == "MiG-15" && x.Instruction.Contains("1.2.0")), "missing checklist action");
+        Check(checklist.Actions.Any(x => x.Action == "CHANGE VERSION" && x.Name == "Aryx F99" && x.Instruction.Contains("1.1.3") && x.Instruction.Contains("1.2.0")), "friendly name and both versions");
         Check(checklist.Actions.Any(x => x.Action == "REMOVE" && x.Name == "Chimera"), "extra checklist action");
         Check(checklist.Matching.Count == 2 && checklist.Matching.Any(x => x.Name == "Blueprinter"), "matching mods separate and loader name readable");
         Check(!checklist.Help.Contains("hash") && !checklist.Help.Contains("compatibility"), "main instruction contains no implementation details");
@@ -83,6 +83,9 @@ internal static class Program
         }
         ServerCacheChecks();
         FavouriteChecks();
+        SavedListRegression.Run(Check);
+        InstalledContentRegression.Run(Check);
+        MapFilesRegression.Run(Check);
         IconChecks();
         ServerFilterChecks();
         QueryPatchChecks();
@@ -117,7 +120,7 @@ internal static class Program
             string garbage = Convert.ToBase64String(Enumerable.Range(0, rng.Next(1,65)).Select(_ => (byte)rng.Next(256)).ToArray());
             Check(Protocol.Decode(k => k == Protocol.Header ? "1:1" : garbage, "0.34") == null, "malformed metadata " + i);
         }
-        if (args.Length != 3) throw new Exception("Expected game directory, client DLL, server DLL");
+        if (args.Length != 5) throw new Exception("Expected game directory, client DLL, server DLL, startup DLL, restart helper");
         var game = AssemblyDefinition.ReadAssembly(Path.Combine(args[0], "NuclearOption_Data", "Managed", "Assembly-CSharp.dll"));
         var client = AssemblyDefinition.ReadAssembly(args[1]);
         var host = AssemblyDefinition.ReadAssembly(args[2]);
@@ -129,6 +132,8 @@ internal static class Program
         Contract(game, lobbies+"LobbyDetailsModal", "Show", "System.Void", lobbies+"LobbyList", lobbies+"LobbyInstance");
         Contract(game, lobbies+"LobbyDetailsModal", "Hide", "System.Void");
         Contract(game, lobbies+"LobbyList", "Start", "System.Void");
+        Contract(game, "MainMenu", "SelectMultiplayer", "System.Void");
+        Contract(game, lobbies+"LobbyList", "ShowLobbyPopup", "System.Void",lobbies+"LobbyInstance");
         Contract(game, lobbies+"LobbyList", "OnDestroy", "System.Void");
         Contract(game, lobbies+"LobbyList", "GetListOfLobbies", "System.Void");
         Contract(game, lobbies+"LobbyList", "UpdateLobbyList", "System.Void");
@@ -187,21 +192,24 @@ internal static class Program
         Check(!serverPaths.Any(i=>i.Operand is MethodReference m && (m.Name=="get_version" || m.Name=="get_Wire" || (m.Name=="Expanded" && m.Parameters.Count==0))), "server does not repeatedly call the Blueprinter-patched version getter");
         Check(!Calls(host,"StartCoroutine") && !Calls(host,"InvokeRepeating"), "server does not schedule recurring work");
         Check(!hostTypes.SelectMany(t=>t.Methods).Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m && (m.DeclaringType.FullName.StartsWith("System.Net.") || m.DeclaringType.FullName.StartsWith("System.Threading."))), "server starts no threads, timers or extra network requests");
-        Check(client.Name.Version.ToString(3)=="1.0.0" && host.Name.Version.ToString(3)=="1.0.0", "both components use the stable 1.0 release version");
+        Check(client.Name.Version.ToString(3)=="1.3.4" && host.Name.Version.ToString(3)=="1.0.0", "client candidate retains the released server version");
         var clientMetadata = client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         var serverMetadata = host.MainModule.GetType("KellysJOINCHECK.ServerPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         Check((string)clientMetadata[0].Value=="kelly.nuclearoption.joincheck" && (string)serverMetadata[0].Value=="kelly.nuclearoption.joincheck.server", "rename retains distinct legacy plugin IDs and existing config ownership");
         Check((string)clientMetadata[1].Value=="Kelly's DOORMAN" && (string)serverMetadata[1].Value=="Kelly's DOORMAN Server", "both displayed plugin names use the new branding");
-        Check((string)clientMetadata[2].Value=="1.0.0" && (string)serverMetadata[2].Value=="1.0.0", "BepInEx loader metadata matches each component's numeric version");
+        Check((string)clientMetadata[2].Value=="1.3.4" && (string)serverMetadata[2].Value=="1.0.0", "BepInEx loader metadata matches each component's numeric version");
         Check(!Diagnostics.Compare(server,local).Contains('\u2014'), "public diagnostics use plain punctuation");
         Check(!Calls(client, "set_version") && !Calls(host, "set_version"), "compatibility identifier not replaced");
         Check(Calls(client,"GetWorldCorners") && Calls(client,"GetPreferredValues"), "native docking and wrapping present");
-        Check(!Calls(client,"set_sprite") && !Calls(client,"set_fillCenter"), "panel and buttons cannot inherit a transparent native sprite centre");
-        Check(!Calls(client,"Instantiate"), "no native controllers or persistent listeners cloned");
+        Check(!client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi").Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m&&(m.Name=="set_sprite"||m.Name=="set_fillCenter")), "join panel and buttons cannot inherit a transparent native sprite centre");
+        var joinUi=client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi");
+        Check(!joinUi.Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m&&m.Name=="Instantiate"), "checklist does not clone native controllers or listeners");
+        var attach=client.MainModule.GetType("KellysJOINCHECK.ModManager").Methods.Single(m=>m.Name=="Attach");
+        Check(attach.Body.Instructions.Any(i=>i.Operand is MethodReference m&&m.Name=="set_onClick"), "cloned Mods button replaces inherited menu listeners");
         Check(!Calls(client,"StartClient") && !Calls(client,"StartHost"), "checklist buttons do not trigger networking");
         var browserHook = client.MainModule.GetType("KellysJOINCHECK.BrowserHooks");
         var rewrite = browserHook.Methods.Single(m=>m.Name=="ApplyQueryOption");
-        Check(rewrite.Body.Instructions.Where(i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Stfld).All(i=>i.Operand is FieldReference f && f.Name=="ignoreVersionFilter"), "query rewrite changes only version-filter flag");
+        Check(rewrite.Body.Instructions.Where(i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Stfld).All(i=>i.Operand is FieldReference f && f.Name=="ignoreVersionFilter"), "ordinary browser query controls only version-filter flag");
         Check(!Calls(client,"AddRequestLobbyListStringFilter") && !Calls(client,"AddRequestLobbyListDistanceFilter"), "native query builds all filters");
         Check(!Calls(client,"SetLobbyData") && !Calls(client,"SetKeyValue") && !Calls(client,"AddFavoriteGame"), "browser settings stay local and do not write Steam/server metadata");
         var browserUi = client.MainModule.GetType("KellysJOINCHECK.BrowserUi");
@@ -232,7 +240,28 @@ internal static class Program
         var lookups = client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi").Methods.Where(m=>m.HasBody)
             .SelectMany(m=>m.Body.Instructions).Where(i=>i.Operand is MethodReference method && method.Name=="GetComponentInChildren").ToArray();
         Check(lookups.Length > 0 && lookups.All(i=>((MethodReference)i.Operand).Parameters.Count==1 && i.Previous.OpCode.Code==Mono.Cecil.Cil.Code.Ldc_I4_1), "native labels resolve while checklist root is inactive");
-        Check(client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").Methods.Where(m => m.Name.EndsWith("Prefix")).All(m => m.ReturnType.FullName == "System.Void"), "diagnostic prefixes cannot skip original join or authentication checks");
+        Check(client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").Methods.Where(m => m.Name.EndsWith("Prefix")&&m.Name!="JoinPrefix").All(m => m.ReturnType.FullName == "System.Void"), "diagnostic prefixes do not skip original authentication checks");
+        ModRegression.Run(Check,client,host,args[0],args[3]);
+        var listsManager=client.MainModule.GetType("KellysJOINCHECK.ModManager");
+        var listPreparation=listsManager.Methods.Single(m=>m.Name=="PrepareSavedList").Body.Instructions;
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="SavedModListPlan"&&m.Name=="Create")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="MenuSafety")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ValidatePlugins")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ApplySelection"),"saved lists use planning, menu/dependency checks and the existing reload/restart transaction");
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="PromptConfirmation"),"saved version differences require confirmation before list application");
+        Check(client.MainModule.GetType("KellysJOINCHECK.NativeModsUi").Methods.Single(m=>m.Name=="ShowLists").Body.Instructions.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="NativeModListsUi"),"saved lists are attached to the existing native Mods UI");
+        Check(!new[]{client.MainModule.GetType("KellysJOINCHECK.NativeModListsUi"),client.MainModule.GetType("KellysJOINCHECK.NativeModsUi"),listsManager}
+            .SelectMany(t=>t.Methods.Where(m=>m.Name=="Tick")).SelectMany(m=>m.Body.Instructions)
+            .Any(i=>i.Operand is MethodReference m&&(m.DeclaringType.FullName.StartsWith("System.IO.")||m.DeclaringType.Name=="SavedModLists"||m.DeclaringType.Name=="InstalledContentMetadata")),"saved list tick paths never scan files or hash plugin sources");
+        Check(host.MainModule.GetType("KellysJOINCHECK.SavedModLists")==null&&host.MainModule.GetType("KellysJOINCHECK.InstalledContentMetadata")==null,"released server binary gains no saved-list runtime work");
+        PreviewRegression.Run(Check,client);
+        DoormanManifestRegression.Run(Check,client,args[1]);
+        MapBridgeChecks.Run(Check,client);
+        ScrollbarRegression.Run(Check,client);
+        UpdateRegression.Run(Check,client,host,args[3]);
+        StartupRegression.Run(Check,args[0],args[3],client);
+        WorkflowRegression.Run(Check,client,args[4],args[0]);
+        RestartRegression.Run(Check,args[4]);
         Console.WriteLine($"PASS: {checks} regression and game assembly contract checks.");
         Console.WriteLine(result);
         return 0;

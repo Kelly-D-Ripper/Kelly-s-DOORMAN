@@ -11,7 +11,8 @@ using UnityEngine;
 
 namespace KellysJOINCHECK
 {
-    [BepInPlugin(Id, "Kelly's DOORMAN", "1.0.0")]
+    [BepInPlugin(Id, "Kelly's DOORMAN", "1.3.4")]
+    [BepInDependency("com.nikkorap.blueprinter", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class ClientPlugin : BaseUnityPlugin
     {
         public const string Id = "kelly.nuclearoption.joincheck";
@@ -26,18 +27,23 @@ namespace KellysJOINCHECK
         private float nextRefresh;
         private Rect window;
         private NativeJoinUi? ui;
+        private ModManager? mods;
         private bool nativeUnavailable, preview, technical;
         private LobbyInstance? previewLobby;
         private LobbyDetailsModal? previewModal;
         private JoinSummary summary = new JoinSummary();
+        private bool runtimeObserved,quitting;
 
         private void Awake()
         {
             if (Application.isBatchMode || SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null) { enabled = false; return; }
+            PreserveRuntimeHost();
             Instance = this;
             reopen = Config.Bind("UI", "ReopenKey", KeyCode.F8, "Reopen the last join diagnostic. Nothing is shown until a compatibility error occurs.");
             harmony = new Harmony(Id);
             BrowserHooks.Initialize(harmony,Config,message=>Logger.LogWarning(message),message=>Logger.LogInfo(message));
+            try { mods=new ModManager(this,harmony,message=>Logger.LogWarning(message)); }
+            catch(Exception ex) { Logger.LogWarning("Mods controls unavailable; normal menu and diagnostics preserved: "+ex.Message); }
             Patch(typeof(SteamLobby), "TryJoinLobby", nameof(JoinPrefix), true);
             Patch(typeof(NetworkManagerNuclearOption), "StartClient", nameof(StartClientPrefix), true);
             Patch(typeof(NetworkManagerNuclearOption), "ClientDisconnected", nameof(StoppedPostfix), false);
@@ -50,7 +56,19 @@ namespace KellysJOINCHECK
             Patch(typeof(JoinLobbyOverlay), "Open", nameof(OverlayPostfix), false);
             var auth = AccessTools.TypeByName("NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption");
             if (auth != null) Patch(auth, "HandleBuildHashMismatch", nameof(BuildPostfix), false);
-            Logger.LogInfo("DOORMAN 1.0.0 loaded. Browser compatibility toggle, saved favourites and native mod checklist.");
+            Logger.LogInfo("DOORMAN 1.3.4 loaded. Native Maps tab, embedded map previews, saved mod lists and detached Steam restart helper.");
+        }
+
+        private void PreserveRuntimeHost()
+        {
+            // The startup helper protects the shared host before any plugin
+            // components exist. Avoid changing flags partway through loading:
+            // that could fire OnDisable on another plugin's component.
+            var host=gameObject;
+            if((host.hideFlags&HideFlags.HideAndDontSave)!=HideFlags.HideAndDontSave)
+                Logger.LogWarning("DOORMAN runtime host lacks lifetime protection. Replace the startup DLL from the complete client package.");
+            UnityEngine.Object.DontDestroyOnLoad(host);
+            Logger.LogInfo("DOORMAN runtime host: "+host.name+"; flags="+host.hideFlags+"; active="+host.activeInHierarchy+"; enabled="+enabled);
         }
 
         private void Patch(Type type, string method, string callback, bool prefix)
@@ -69,19 +87,29 @@ namespace KellysJOINCHECK
             try { action(); }
             catch (Exception ex) { Instance?.Logger.LogWarning("DOORMAN diagnostic failed: " + ex.GetType().Name); }
         }
-        private static void JoinPrefix(LobbyInstance __0) => Guard(() =>
+        private static bool JoinPrefix(SteamLobby __instance,LobbyInstance __0,string __1,bool __2)
         {
             var self = Instance;
-            if (self == null) return;
-            self.lobby = __0;
-            self.attempted = false; // Map diagnostics start only when a real client connection starts.
-            self.browserStartPending = __0.HostVersion == Compatibility.Wire;
-            self.visible = false;
-            self.ui?.Hide();
-            self.preview = false;
-            self.report = self.lastFailure = "";
-            if (__0.HostVersion != Compatibility.Wire) self.Show("Incorrect version or mod compatibility signature");
-        });
+            if (self == null) return true;
+            Guard(() =>
+            {
+                self.lobby = __0;
+                self.attempted = false; // Map diagnostics start only when a real client connection starts.
+                self.browserStartPending = __0.HostVersion == Compatibility.Wire;
+                self.visible = false;
+                self.ui?.Hide();
+                self.preview = false;
+                self.report = self.lastFailure = "";
+            });
+            try
+            {
+                string expanded=Protocol.Decode(k=>self.Read(__0,k),__0.HostVersion)??__0.HostVersion;
+                if(self.mods?.BeforeJoin(__instance,__0,__1,__2,expanded)==false) return false;
+            }
+            catch(Exception ex) { self.Logger.LogWarning("Automatic mod matching unavailable: "+ex.Message); }
+            if (__0.HostVersion != Compatibility.Wire) Guard(()=>self.Show("Incorrect version or mod compatibility signature"));
+            return true;
+        }
         private static void StartClientPrefix(ConnectOptions __0) => Guard(() =>
         {
             var self = Instance;
@@ -155,6 +183,7 @@ namespace KellysJOINCHECK
             var self = Instance;
             if (self == null) return;
             if (self.preview) { self.visible = false; self.ui?.Hide(); }
+            self.mods?.CancelServerSetup();
             self.preview = false; self.ui?.Detach();
             self.previewModal = null; self.previewLobby = null;
         });
@@ -168,7 +197,7 @@ namespace KellysJOINCHECK
         private void EnsureUi()
         {
             if (ui != null || nativeUnavailable) return;
-            try { ui = new NativeJoinUi(() => visible = false); }
+            try { ui = new NativeJoinUi(() => { visible=false;mods?.CancelServerSetup(); },()=>{ visible=false; mods?.Open(); },SetupCurrentServer,JoinCurrentServer); }
             catch (Exception ex) { nativeUnavailable = true; Logger.LogWarning("Native checklist unavailable; using compact fallback: " + ex.GetType().Name); }
         }
         private void RefreshPreview(bool reset = false)
@@ -177,6 +206,7 @@ namespace KellysJOINCHECK
             EnsureUi();
             summary = Describe(previewLobby, "", out var text);
             ui?.Set(summary, previewLobby.LobbyNameSanitized, text, reset);
+            RefreshServerActions();
             ui?.Attach(previewModal, () => { preview = true; RefreshPreview(true); visible = true; ui?.Show(); scroll = Vector2.zero; }, summary);
         }
         private string Read(LobbyInstance? target, string key)
@@ -200,7 +230,23 @@ namespace KellysJOINCHECK
         {
             summary = Describe(lobby, lastFailure, out report);
             ui?.Set(summary, lobby?.LobbyNameSanitized ?? "Direct connection", report, reset);
+            RefreshServerActions();
         }
+        private LobbyInstance? CurrentServer=>preview?previewLobby:lobby;
+        internal string ExpandedFor(LobbyInstance target)=>Protocol.Decode(k=>Read(target,k),target.HostVersion)??target.HostVersion;
+        private void SetupCurrentServer(){var target=CurrentServer;if(target!=null)mods?.SetupServer(target,ExpandedFor(target));}
+        private void JoinCurrentServer(){var target=CurrentServer;if(target!=null&&target.HostVersion==Compatibility.Wire){HideServerWorkflow();SteamLobby.instance.TryJoinLobby(target,"",true);}}
+        internal void RefreshServerActions()
+        {
+            var target=CurrentServer;if(target==null||mods==null){ui?.SetServerActions(false,"Setup mods",false,false,"");return;}
+            mods.ServerActions(target,out var label,out var setup,out var join,out var message);ui?.SetServerActions(true,label,setup,join,message);
+        }
+        internal void ShowServerWorkflow(LobbyInstance target)
+        {
+            if(previewLobby!=target){preview=false;lobby=target;}
+            EnsureUi();if(preview)RefreshPreview();else RefreshReport();visible=true;ui?.Show();
+        }
+        internal void HideServerWorkflow(){visible=false;ui?.Hide();}
         private JoinSummary Describe(LobbyInstance? target, string failure, out string text)
         {
             string wire = target?.HostVersion ?? "";
@@ -209,18 +255,24 @@ namespace KellysJOINCHECK
             text = "Server: " + Diagnostics.Clean(target?.LobbyNameSanitized ?? "Direct connection / unknown server") + "\n\n" + Diagnostics.Clean(failure) + "\n\n";
             if (wire.Length > 0) text += Diagnostics.Compare(expanded, local);
             else text += "This connection did not provide a server compatibility list. Join through the server browser for pre-join mod details.\n";
-            text += "\nServer compatibility: " + Diagnostics.Clean(wire.Length > 0 ? wire : "not supplied") + "\nYour compatibility: " + Diagnostics.Clean(Compatibility.Wire) + "\n\nRestart after changing mods. Copy report to share with the host.";
+            text += "\nServer compatibility: " + Diagnostics.Clean(wire.Length > 0 ? wire : "not supplied") + "\nYour compatibility: " + Diagnostics.Clean(Compatibility.Wire) + "\n\nUse Setup mods, then Join server. Proceed restarts and returns here when needed. Copy report to share with the host.";
             return JoinSummary.Create(expanded, local, wire, Compatibility.Wire, failure);
         }
         private void Update()
         {
+            if(!runtimeObserved)
+            {
+                runtimeObserved=true;
+                Logger.LogInfo("DOORMAN first runtime update: scene="+UnityEngine.SceneManagement.SceneManager.GetActiveScene().path+"; hostActive="+gameObject.activeInHierarchy+"; flags="+gameObject.hideFlags);
+            }
+            mods?.Tick();
             if (Input.GetKeyDown(reopen.Value) && (report.Length > 0 || previewLobby != null))
             {
                 visible = !visible;
                 if (visible) { if (preview && previewLobby != null) RefreshPreview(true); else { preview = false; EnsureUi(); RefreshReport(); } ui?.Show(); }
-                else ui?.Hide();
+                else { ui?.Hide();mods?.CancelServerSetup(); }
             }
-            if (visible && Input.GetKeyDown(KeyCode.Escape)) { visible = false; ui?.Hide(); }
+            if (visible && Input.GetKeyDown(KeyCode.Escape)) { visible = false; ui?.Hide();mods?.CancelServerSetup(); }
             // Rule queries can finish after a failed join. Refresh the visible report, never the join decision.
             if ((visible || previewLobby != null) && Time.unscaledTime >= nextRefresh)
             {
@@ -254,7 +306,7 @@ namespace KellysJOINCHECK
         {
             var label = new GUIStyle(GUI.skin.label) { wordWrap = true, richText = false, fontSize = 16 };
             GUILayout.Space(12);
-            scroll = GUILayout.BeginScrollView(scroll);
+            scroll = GUILayout.BeginScrollView(scroll,false,true);
             GUILayout.Label(summary.Title, new GUIStyle(label) { fontSize = 24 });
             GUILayout.Label(summary.Help, label); GUILayout.Space(16);
             string text = report;
@@ -269,13 +321,26 @@ namespace KellysJOINCHECK
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Copy report", GUILayout.Height(34))) GUIUtility.systemCopyBuffer = text;
             if (GUILayout.Button(technical ? "Checklist" : "Details", GUILayout.Height(34))) technical = !technical;
-            if (GUILayout.Button("Close", GUILayout.Height(34))) visible = false;
+            if(CurrentServer!=null&&mods!=null)
+            {
+                mods.ServerActions(CurrentServer,out var action,out var setup,out var join,out var message);GUILayout.Label(message,label);
+                GUI.enabled=setup;if(GUILayout.Button(action,GUILayout.Height(34)))SetupCurrentServer();
+                GUI.enabled=join;if(GUILayout.Button("Join server",GUILayout.Height(34)))JoinCurrentServer();GUI.enabled=true;
+            }
+            if (GUILayout.Button("Close", GUILayout.Height(34))) { visible = false;mods?.CancelServerSetup(); }
             GUILayout.EndHorizontal();
+        }
+        private void OnApplicationQuit(){quitting=true;}
+        private void OnDisable()
+        {
+            if(Instance==this)Logger.LogWarning("DOORMAN runtime disabled: quitting="+quitting+"; firstUpdate="+runtimeObserved+"; scene="+UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
         }
         private void OnDestroy()
         {
+            if(Instance==this)Logger.LogWarning("DOORMAN runtime destroyed: quitting="+quitting+"; firstUpdate="+runtimeObserved+"; scene="+UnityEngine.SceneManagement.SceneManager.GetActiveScene().path);
             harmony?.UnpatchSelf();
             BrowserHooks.Dispose();
+            mods?.Dispose();
             ui?.Dispose();
             if (Instance == this) Instance = null;
         }

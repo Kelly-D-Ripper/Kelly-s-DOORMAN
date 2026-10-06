@@ -1,26 +1,22 @@
 # Kelly's DOORMAN
 
-Nuclear Option says "Incorrect version" and leaves you to develop psychic powers. DOORMAN tells you which mods are missing, wrong, or extra. Revolutionary stuff: an error message with information in it.
+"Incorrect version" is apparently an instruction now. DOORMAN supplies the missing information.
 
-[Download 1.0, full package](https://github.com/Kelly-D-Ripper/Kelly-s-DOORMAN/releases/download/v1.0/KellysDOORMAN-1.0.0-FULL.zip)
+**1.3.4 release candidate.** The published [1.0 release](https://github.com/Kelly-D-Ripper/Kelly-s-DOORMAN/releases/tag/v1.0) remains available.
 
-## Install
+Close Nuclear Option, extract **FULL** into its game folder and overwrite. Keep your config. Both helpers are required. Requires BepInEx 5 and Blueprinter 2.0.1 for content switching. FULL includes both; CLIENT omits the server companion. Upgrading an earlier test build? Remove its bundled `BepInEx/plugins/DOORMAN-Previews/aryx` folder once. Keep your actual mods.
 
-Requires **BepInEx 5**. Close the game, extract the **FULL** ZIP into your Nuclear Option folder, then restart. Replace the old JOINCHECK DLLs if you have them. Keep your config.
+- **Mods** on the main menu: tick your packs, press **Reload mods**, go fly.
+- **Saved lists**: name your ticks, load them later. Share JSON files from `BepInEx/plugins/DOORMAN-Lists`. Organised chaos.
+- **Maps**: browse `.nomap` details and previews. Folder changes appear while open; new builds need restarting.
+- Supported content switches from the menus without restarting. New files and ordinary code plugin changes still need a restart. Computers remain inconvenient.
+- Select a server, click **Setup mods**, then **Join server**. **Auto match mods when joining a server** does setup when you press Join.
+- **Proceed** restarts with a Windows status box, waits for Steam and loading, then returns to that server. Vanilla servers leave Blueprinter out. DOORMAN and unrelated client plugins stay enabled.
+- Developers can supply JSON/images or embed them in their DLL.
+- No preview manifest? DOORMAN borrows available details from NOMNOM. Custom manifests win. Missing files, wrong versions and different game builds still need fixing.
+- GitHub checks run on a mod's page and cache for six hours. **Update** downloads it; restart installs it with a backup.
+- **Show incompatible servers**, favourites, **Only favourites**, compatibility checklists, **Copy report** and **F8** still do their jobs.
 
-Both DLLs go in `BepInEx/plugins`. Yes, you can keep both installed when you join and occasionally host.
+Hashed server lists need DOORMAN Server. The server DLL remains 1.0.0. Dedicated hosts can keep the existing SERVER download.
 
-Dedicated server? Use the **SERVER** ZIP. Just playing? The **CLIENT** ZIP is enough.
-
-## Use it
-
-- **Check mods** in server details shows what needs installing, changing, or removing. Failed joins get a report too.
-- **Show incompatible servers** reveals servers the browser normally hides. Other filters still apply. Use All and Global for the widest list.
-- Click a **star** to save a server. **Only favourites** finds it again without the archaeological expedition.
-- **Copy report** copies the problem. **F8** reopens it. Restart after changing mods.
-
-For exact lists from servers using hashed Blueprinter versions, the host needs the server DLL. Without it, telepathy remains unsupported.
-
-Showing an incompatible server does not make it compatible. You still have to fix your mods. Tragic.
-
-Refresh updates the listed dedicated servers. Reopen the browser to discover newly advertised ones.
+Developers: [mod previews](docs/MOD-PREVIEWS.md), [map previews](docs/MAP-PREVIEWS.md). [Saved lists](docs/MOD-LISTS.md). [Server setup](docs/SERVER-SETUP.md). [Recovery](docs/RECOVERY.md). [Testing](docs/MODS-TEST.md).

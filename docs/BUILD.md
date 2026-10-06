@@ -1,4 +1,18 @@
-# Build
+# Build the Mods menu candidate
+
+Run `Build-Package.ps1` with the installed game and .NET 8 SDK. It builds Client 1.3.4, its separate startup DLL and Windows restart EXE, tests them against the exact released Server 1.0.0 DLL, and writes `dist/1.3.4`.
+
+The original published SERVER ZIP must be available as `dist/KellysDOORMAN-1.0.0-SERVER.zip`, or passed with `-ServerArchive`. Download that asset from the existing v1.0 release when building a fresh SOURCE checkout. Its archive and DLL digests are checked before reuse. This candidate never rebuilds or changes the server companion.
+
+FULL/CLIENT include documentation and both helpers. SOURCE includes candidate sources and checks. Sample previews/images and players' saved lists are excluded. Every archive member is checked against its source bytes. Previous artifacts and evidence remain outside the candidate output directory.
+
+The client embeds its own card from `metadata/client/doorman.json`. No artwork is required. Add `metadata/client/doorman.png` when ready; its exact logical resource name is picked up automatically, with no JSON change. SOURCE includes these real build inputs; FULL/CLIENT carry them inside the DLL.
+
+The current candidate's configuration/database impact and limitations are in [MODS-HANDOFF.md](MODS-HANDOFF.md); acceptance remains [MODS-TEST.md](MODS-TEST.md). The text below describes the archived 1.0 baseline and is retained as release history.
+
+On an interactive Windows desktop, `build-tools/Test-DetachedRestart.ps1` exercises the compiled client's short bootstrap and Explorer broker. It creates only a parent-process JSON report, with no game launch, game shutdown or status window. Parent PID must equal the desktop Explorer PID and the helper's Steam context must be cleared. Run this outside an isolated sandbox desktop; it intentionally fails closed when that desktop's shell is unavailable. An actual Steam game restart remains a separate acceptance test.
+
+## Archived 1.0 build
 
 Install the .NET 8 SDK and Nuclear Option with BepInEx 5. Run:
 

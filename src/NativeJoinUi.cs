@@ -19,6 +19,8 @@ namespace KellysJOINCHECK
         private readonly TMP_Text template, title, serverName, help, footer, detailsLabel, matchingLabel;
         private readonly Button? buttonTemplate;
         private readonly Button matchingButton;
+        private readonly RectTransform serverActions;
+        private readonly Button setupButton,joinServerButton;
         private readonly ScrollRect scroll;
         private readonly List<GameObject> rows = new List<GameObject>(), ownedButtons = new List<GameObject>();
         private readonly Vector3[] corners = new Vector3[4];
@@ -35,7 +37,7 @@ namespace KellysJOINCHECK
         internal bool IsOpen => opened && root != null && root.activeInHierarchy;
         internal bool CanInteract => EventSystem.current != null && EventSystem.current.isActiveAndEnabled;
 
-        internal NativeJoinUi(Action close)
+        internal NativeJoinUi(Action close,UnityAction? manageMods=null,UnityAction? setupMods=null,UnityAction? joinServer=null)
         {
             this.close = close;
             var prefab = Resources.Load<GameObject>("JoinLobbyOverlayCanvas");
@@ -66,22 +68,24 @@ namespace KellysJOINCHECK
                 help = Text("Next step",panel,19); Top(help.rectTransform,20,105,-20,80);
                 scrollBox = Rect("Checklist",panel); Stretch(scrollBox); scrollBox.offsetMin = new Vector2(20,146); scrollBox.offsetMax = new Vector2(-20,-195);
                 scroll = scrollBox.gameObject.AddComponent<ScrollRect>(); scroll.horizontal = false; scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 34;
-                var viewport = Rect("Viewport",scrollBox); Stretch(viewport); viewport.offsetMax = new Vector2(-12,0); viewport.gameObject.AddComponent<RectMask2D>();
+                var viewport = Rect("Viewport",scrollBox); Stretch(viewport); viewport.gameObject.AddComponent<RectMask2D>();
                 var hit = viewport.gameObject.AddComponent<Image>(); hit.color = Color.clear;
                 content = Rect("Items",viewport); content.anchorMin = new Vector2(0,1); content.anchorMax = Vector2.one; content.pivot = new Vector2(.5f,1); content.offsetMin = content.offsetMax = Vector2.zero;
                 scroll.viewport = viewport; scroll.content = content;
-                var trackRect = Rect("Scrollbar",scrollBox); trackRect.anchorMin = new Vector2(1,0); trackRect.anchorMax = Vector2.one; trackRect.offsetMin = new Vector2(-6,0); trackRect.offsetMax = Vector2.zero;
-                var track = trackRect.gameObject.AddComponent<Image>(); track.color = new Color(.16f,.19f,.23f);
-                var handleRect = Rect("Handle",trackRect); Stretch(handleRect); var handle = handleRect.gameObject.AddComponent<Image>(); handle.color = LobbyListItem.TextMutedColor;
-                var bar = trackRect.gameObject.AddComponent<Scrollbar>(); bar.direction = Scrollbar.Direction.BottomToTop; bar.handleRect = handleRect; bar.targetGraphic = handle;
-                scroll.verticalScrollbar = bar; scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+                NativeScrollbars.Attach(scroll);
                 matchingButton = Button("Matching mods",panel,()=> { matching = !matching; DrawRows(); }); Bottom((RectTransform)matchingButton.transform,22,102,-22,32);
                 matchingLabel = matchingButton.GetComponentInChildren<TMP_Text>(true);
                 footer = Text("Note",panel,16); Bottom(footer.rectTransform,22,62,-22,34); footer.color = LobbyListItem.TextMutedColor;
                 actions = Rect("Actions",panel); Bottom(actions,20,20,-20,JoinLayout.ActionHeight);
-                var copy = Button("Copy report",actions,()=> { GUIUtility.systemCopyBuffer = report; footer.text = "Copied. Send to the host."; layoutDirty = true; }); Third((RectTransform)copy.transform,0);
-                var detail = Button("Details",actions,()=> { details = !details; DrawRows(); }); Third((RectTransform)detail.transform,1); detailsLabel = detail.GetComponentInChildren<TMP_Text>(true);
-                var dismiss = Button("Close",actions,()=> { Hide(); close(); }); Third((RectTransform)dismiss.transform,2);
+                serverActions=Rect("Server actions",panel);Bottom(serverActions,20,JoinLayout.Margin+JoinLayout.ActionHeight+JoinLayout.Gap,-20,JoinLayout.ActionHeight);
+                setupButton=Button("Setup mods",serverActions,()=>setupMods?.Invoke());ActionSlot((RectTransform)setupButton.transform,0,2);
+                joinServerButton=Button("Join server",serverActions,()=>joinServer?.Invoke());ActionSlot((RectTransform)joinServerButton.transform,1,2);
+                setupButton.GetComponent<Image>().color=new Color(.18f,.38f,.29f,1);joinServerButton.GetComponent<Image>().color=new Color(.20f,.52f,.34f,1);serverActions.gameObject.SetActive(false);
+                int slots=manageMods==null||setupMods!=null?3:4;
+                var copy = Button("Copy report",actions,()=> { GUIUtility.systemCopyBuffer = report; footer.text = "Copied. Send to the host."; layoutDirty = true; }); ActionSlot((RectTransform)copy.transform,0,slots);
+                var detail = Button("Details",actions,()=> { details = !details; DrawRows(); }); ActionSlot((RectTransform)detail.transform,1,slots); detailsLabel = detail.GetComponentInChildren<TMP_Text>(true);
+                if(manageMods!=null&&setupMods==null) { var mods=Button("Mods",actions,()=>{ Hide(); manageMods(); }); ActionSlot((RectTransform)mods.transform,2,slots); }
+                var dismiss = Button("Close",actions,()=> { Hide(); close(); }); ActionSlot((RectTransform)dismiss.transform,slots-1,slots);
             }
             catch { UnityEngine.Object.Destroy(root); throw; }
         }
@@ -116,10 +120,16 @@ namespace KellysJOINCHECK
             string name = Diagnostics.Clean(server);
             if (!reset && diagnostic == report && serverName.text == name) return;
             summary = value; report = diagnostic; title.text = value.Title; title.color = StatusColor(value.Status); serverName.text = name; help.text = value.Help;
-            footer.text = "Restart the game after changing mods.";
+            footer.text = "Setup mods, then Join server. Restarts ask before proceeding.";
             layoutDirty = true;
             if (reset) { details = matching = false; scroll.verticalNormalizedPosition = 1; }
             DrawRows();
+        }
+        internal void SetServerActions(bool active,string label,bool setup,bool join,string message)
+        {
+            serverActions.gameObject.SetActive(active);setupButton.interactable=setup;joinServerButton.interactable=join;
+            setupButton.GetComponentInChildren<TMP_Text>(true).text=label;
+            help.text=message.Length>0?message:summary.Status==JoinStatus.Match?"Mods ready. Click Join server.":"Click Setup mods to prepare the installed mods for this server.";layoutDirty=true;
         }
         internal bool TryDock()
         {
@@ -171,7 +181,8 @@ namespace KellysJOINCHECK
             var size = panel.rect.size;
             if (!layoutDirty && size == laidOutSize) return;
             float width = Mathf.Max(80,size.x-2*JoinLayout.Margin);
-            var layout = JoinLayout.Measure(size.y,
+            float extra=serverActions.gameObject.activeSelf?JoinLayout.ActionHeight+JoinLayout.Gap:0;
+            var layout = JoinLayout.Measure(size.y-extra,
                 title.GetPreferredValues(title.text,width,0).y+4,
                 help.GetPreferredValues(help.text,width,0).y+4,
                 footer.GetPreferredValues(footer.text,width,0).y+4,
@@ -179,11 +190,11 @@ namespace KellysJOINCHECK
             Top(title.rectTransform,20,20,-20,layout.TitleHeight);
             Top(serverName.rectTransform,20,layout.ServerTop,-20,26);
             Top(help.rectTransform,20,layout.HelpTop,-20,layout.HelpHeight);
-            Bottom(footer.rectTransform,20,layout.FooterBottom,-20,layout.FooterHeight);
-            Bottom((RectTransform)matchingButton.transform,20,layout.FooterBottom+layout.FooterHeight+JoinLayout.Gap,-20,JoinLayout.MatchingHeight);
-            scrollBox.offsetMin = new Vector2(20,layout.ListBottom);
+            Bottom(footer.rectTransform,20,layout.FooterBottom+extra,-20,layout.FooterHeight);
+            Bottom((RectTransform)matchingButton.transform,20,layout.FooterBottom+extra+layout.FooterHeight+JoinLayout.Gap,-20,JoinLayout.MatchingHeight);
+            scrollBox.offsetMin = new Vector2(20,layout.ListBottom+extra);
             scrollBox.offsetMax = new Vector2(-20,-layout.ListTop);
-            if (Mathf.Abs(Mathf.Max(80,size.x-80)-rowWidth)>1) DrawRows();
+            if (Mathf.Abs(CardWidth()-rowWidth)>1) DrawRows();
             laidOutSize = size; layoutDirty = false;
         }
         private bool DockBounds(out Rect bounds)
@@ -201,8 +212,7 @@ namespace KellysJOINCHECK
         private void Place(Rect bounds) { shade.SetActive(false); panel.sizeDelta = bounds.size; panel.anchoredPosition = new Vector2(bounds.x,-bounds.y); }
         private void DrawRows()
         {
-            // 40 outer margin + 12 scrollbar gutter + 28 card text margin.
-            rowWidth = Mathf.Max(80,panel.rect.width-80);
+            rowWidth = CardWidth();
             foreach (var row in rows) { row.SetActive(false); UnityEngine.Object.Destroy(row); } rows.Clear();
             detailsLabel.text = details ? "Checklist" : "Details"; matchingLabel.text = (matching ? "Hide" : "View")+" matching mods ("+summary.Matching.Count+")";
             matchingButton.gameObject.SetActive(!details && summary.Matching.Count>0);
@@ -218,6 +228,7 @@ namespace KellysJOINCHECK
             }
             content.sizeDelta = new Vector2(0,y);
         }
+        private float CardWidth()=>Mathf.Max(80,panel.rect.width-2*JoinLayout.Margin-NativeScrollbars.Gutter-28);
         private void AddRow(string action,string name,string instruction,ref float y,bool technical=false)
         {
             var row = Rect("Item",content); row.anchorMin = new Vector2(0,1); row.anchorMax = Vector2.one; row.pivot = new Vector2(.5f,1); row.offsetMin = row.offsetMax = Vector2.zero;
@@ -251,7 +262,7 @@ namespace KellysJOINCHECK
         private static void Stretch(RectTransform rect,float inset=0) { rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one; rect.offsetMin = new Vector2(inset,inset); rect.offsetMax = new Vector2(-inset,-inset); }
         private static void Top(RectTransform rect,float left,float top,float right,float height) { rect.anchorMin = new Vector2(0,1); rect.anchorMax = Vector2.one; rect.pivot = new Vector2(.5f,1); rect.offsetMin = new Vector2(left,-top-height); rect.offsetMax = new Vector2(right,-top); }
         private static void Bottom(RectTransform rect,float left,float bottom,float right,float height) { rect.anchorMin = Vector2.zero; rect.anchorMax = new Vector2(1,0); rect.offsetMin = new Vector2(left,bottom); rect.offsetMax = new Vector2(right,bottom+height); }
-        private static void Third(RectTransform rect,int index) { rect.anchorMin = new Vector2(index/3f,0); rect.anchorMax = new Vector2((index+1)/3f,1); rect.offsetMin = new Vector2(3,0); rect.offsetMax = new Vector2(-3,0); }
+        private static void ActionSlot(RectTransform rect,int index,int count) { rect.anchorMin = new Vector2(index/(float)count,0); rect.anchorMax = new Vector2((index+1)/(float)count,1); rect.offsetMin = new Vector2(3,0); rect.offsetMax = new Vector2(-3,0); }
         public void Dispose() { Detach(); foreach (var button in ownedButtons) if (button!=null) UnityEngine.Object.Destroy(button); UnityEngine.Object.Destroy(root); }
     }
 }
