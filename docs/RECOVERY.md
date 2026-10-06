@@ -1,6 +1,6 @@
 # Break glass, get your mods back
 
-Missing Mods button? Stuck with a server's mod selection? Close Nuclear Option completely, including any DOORMAN restart/status window.
+Missing Mods button? Stuck with a server's mod selection? Close Nuclear Option completely. If a DOORMAN restart is still running, end `KellysDOORMANRestart.exe` in Task Manager first. Clicking the status window's X only hides it. Alternatively, let the restart finish, then close the game.
 
 In your game's `BepInEx/config` folder, rename these files if present:
 

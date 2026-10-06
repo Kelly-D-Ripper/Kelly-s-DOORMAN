@@ -1,7 +1,8 @@
 param(
     [string]$GameDir = $(if ($env:NUCLEAR_OPTION_DIR) { $env:NUCLEAR_OPTION_DIR } else { 'C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option' }),
     [string]$DotnetPath = '',
-    [string]$ServerArchive = ''
+    [string]$ServerArchive = '',
+    [string]$OutputDir = ''
 )
 $ErrorActionPreference = 'Stop'
 $version = '1.3.4'
@@ -17,7 +18,7 @@ if ((Get-FileHash -LiteralPath $ServerArchive).Hash -ne '3FCF98043365EAB1814843B
 $cache = Join-Path $workspace '.tools\nuget-packages'
 if (Test-Path -LiteralPath $cache) { $env:NUGET_PACKAGES = $cache }
 $evidence = Join-Path $PSScriptRoot "evidence\$packageVersion"
-$dist = Join-Path $PSScriptRoot "dist\$packageVersion"
+$dist = if ($OutputDir) { [IO.Path]::GetFullPath($OutputDir) } else { Join-Path $PSScriptRoot "dist\$packageVersion" }
 New-Item -ItemType Directory -Force -Path $evidence,$dist | Out-Null
 $client = Join-Path $PSScriptRoot 'bin\Release\KellysJOINCHECK\net472\KellysJOINCHECK.dll'
 $startup = Join-Path $PSScriptRoot 'startup\bin\Release\net472\KellysDOORMANStartup.dll'
@@ -45,27 +46,28 @@ $testLog = Join-Path $evidence 'test-results.txt'
 if ($LASTEXITCODE -ne 0) { throw 'Regression checks failed.' }
 $match = [regex]::Match((Get-Content -LiteralPath $testLog -Raw),'PASS: (\d+) regression')
 if (!$match.Success) { throw 'Tests did not complete successfully.' }
-foreach ($file in @('README.md','docs/MOD-PREVIEWS.md','docs/MAP-PREVIEWS.md','docs/MOD-LISTS.md','docs/MODS-TEST.md','docs/MODS-HANDOFF.md','docs/UPDATES.md','docs/SERVER-SETUP.md')) {
+foreach ($file in @('README.md','docs/RECOVERY.md','docs/DEVELOPER.md')) {
     if ((Get-Content -LiteralPath (Join-Path $PSScriptRoot $file) -Raw).Contains([char]0x2014)) { throw "Em dash in $file" }
 }
-if ([regex]::Matches((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'docs/MOD-PREVIEWS.md') -Raw),'\S+').Count -gt 350) { throw 'Modder guide exceeds 350 words.' }
-if ([regex]::Matches((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'docs/MAP-PREVIEWS.md') -Raw),'\S+').Count -gt 220) { throw 'Map preview guide exceeds 220 words.' }
+if ([regex]::Matches((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'docs/DEVELOPER.md') -Raw),'\S+').Count -gt 650) { throw 'Developer guide exceeds 650 words.' }
 if ([regex]::Matches((Get-Content -LiteralPath (Join-Path $PSScriptRoot 'README.md') -Raw),'\S+').Count -gt 300) { throw 'README exceeds 300 words.' }
 . (Join-Path $PSScriptRoot 'build-tools\New-CrossPlatformZip.ps1')
 function New-VerifiedPackage {
     param([string]$Name,[array]$Files)
-    $folder = Join-Path $dist $Name
+    $folder = Join-Path $dist ($Name+'.stage-'+[Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Force -Path $folder | Out-Null
     foreach ($file in $Files) {
         $target = Join-Path $folder $file.To
         New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
         Copy-Item -LiteralPath $file.From -Destination $target -Force
     }
-    $zipPath = $folder+'.zip'
+    $zipPath = Join-Path $dist ($Name+'.zip')
     New-CrossPlatformZip -SourceDirectory $folder -DestinationPath $zipPath
     $zip = [IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
         if (Compare-Object ($zip.Entries.FullName | Sort-Object) ($Files.To | Sort-Object)) { throw "Unexpected package member in $Name." }
+        $expectedGuides = @('README.md','docs/RECOVERY.md','docs/DEVELOPER.md')
+        if (Compare-Object ($zip.Entries.FullName | Where-Object { $_ -like '*.md' } | Sort-Object) ($expectedGuides | Sort-Object)) { throw "Package must contain exactly three guides: $Name." }
         if ($zip.Entries.FullName | Where-Object { $_ -match '(?i)(^|/)(previews|DOORMAN-Previews)/|\.doorman\.json$|\.(png|jpe?g)$' -and $_ -ne 'metadata/client/doorman.png' }) { throw "Sample preview/image files must not be shipped in $Name." }
         foreach ($file in $Files) {
             $stream = $zip.GetEntry($file.To).Open(); $sha = [Security.Cryptography.SHA256]::Create()
@@ -76,7 +78,7 @@ function New-VerifiedPackage {
     Write-Host "Verified $Name"
     return (Get-FileHash -LiteralPath $zipPath | Select-Object Path,Hash)
 }
-$docs = @('docs/RECOVERY.md','docs/RELEASE-1.3.4.md','docs/RELEASE-AUDIT.md','README.md','LICENSE','docs/MOD-PREVIEWS.md','docs/MAP-PREVIEWS.md','docs/MOD-LISTS.md','docs/MODS-TEST.md','docs/MODS-HANDOFF.md','docs/UPDATES.md','docs/SERVER-SETUP.md')
+$docs = @('README.md','docs/RECOVERY.md','docs/DEVELOPER.md','LICENSE')
 $common = @($docs | ForEach-Object { @{ From=(Join-Path $PSScriptRoot $_); To=$_ } })
 $common += @{ From=$client; To='BepInEx/plugins/KellysJOINCHECK.dll' }
 $common += @{ From=$startup; To='BepInEx/patchers/KellysDOORMANStartup.dll' }
@@ -88,15 +90,15 @@ $serverCopy = Join-Path $dist 'KellysDOORMAN-1.0.0-SERVER.zip'
 Copy-Item -LiteralPath $ServerArchive -Destination $serverCopy -Force
 if ((Get-FileHash -LiteralPath $serverCopy).Hash -ne (Get-FileHash -LiteralPath $ServerArchive).Hash) { throw 'SERVER copy changed.' }
 $artifacts += Get-FileHash -LiteralPath $serverCopy | Select-Object Path,Hash
-$sourceNames = @('README.md','LICENSE','.gitignore','.gitattributes','KellysDOORMAN.csproj','Build-Package.ps1','build-tools/New-CrossPlatformZip.ps1','tests/Tests.csproj','tests/Program.cs','tests/ModChecks.cs','tests/UpdateChecks.cs','tests/StartupChecks.cs','tests/NativeBrowserLayout.json','startup/DoormanStartup.csproj','startup/DoormanStartupPatcher.cs','startup/DoormanStartupPatch.cs','startup/DoormanRuntimeHooks.cs','docs/BUILD.md','docs/IN-GAME-TEST.md','docs/MOD-PREVIEWS.md','docs/MODS-TEST.md','docs/MODS-HANDOFF.md','docs/UPDATES.md')
+$sourceNames = @('README.md','LICENSE','.gitignore','.gitattributes','KellysDOORMAN.csproj','Build-Package.ps1','build-tools/New-CrossPlatformZip.ps1','tests/Tests.csproj','tests/Program.cs','tests/ModChecks.cs','tests/UpdateChecks.cs','tests/StartupChecks.cs','tests/NativeBrowserLayout.json','startup/DoormanStartup.csproj','startup/DoormanStartupPatcher.cs','startup/DoormanStartupPatch.cs','startup/DoormanRuntimeHooks.cs','docs/RECOVERY.md','docs/DEVELOPER.md')
 $sourceNames += @(Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'src') -Filter '*.cs' -File | ForEach-Object { 'src/'+$_.Name })
-$sourceNames += @('restart/RestartHelper.csproj','restart/Program.cs','restart/StatusWindow.cs','restart/RestartLaunchPolicy.cs','restart/SteamSessionState.cs','restart/RestartProcessFamily.cs','restart/DesktopRestartBroker.cs','tests/WorkflowChecks.cs','tests/RestartChecks.cs','docs/SERVER-SETUP.md')
+$sourceNames += @('restart/RestartHelper.csproj','restart/Program.cs','restart/StatusWindow.cs','restart/RestartLaunchPolicy.cs','restart/SteamSessionState.cs','restart/RestartProcessFamily.cs','restart/DesktopRestartBroker.cs','tests/WorkflowChecks.cs','tests/RestartChecks.cs')
 $sourceNames += @('startup/DoormanRuntimeHost.cs','build-tools/Test-DetachedRestart.ps1')
 $sourceNames += @('tests/PreviewChecks.cs')
-$sourceNames += @('tests/SavedListChecks.cs','tests/InstalledContentChecks.cs','docs/MOD-LISTS.md')
-$sourceNames += @('tests/MapFilesTests.cs','tests/MapBridgeChecks.cs','docs/MAP-PREVIEWS.md')
+$sourceNames += @('tests/SavedListChecks.cs','tests/InstalledContentChecks.cs')
+$sourceNames += @('tests/MapFilesTests.cs','tests/MapBridgeChecks.cs')
 $sourceNames += @('metadata/client/doorman.json','tests/DoormanManifestChecks.cs')
-$sourceNames += @('tests/ScrollbarChecks.cs','docs/RECOVERY.md','docs/RELEASE-1.3.4.md','docs/RELEASE-AUDIT.md')
+$sourceNames += @('tests/ScrollbarChecks.cs')
 if (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'metadata/client/doorman.png')) { $sourceNames += 'metadata/client/doorman.png' }
 $sourceFiles = @($sourceNames | ForEach-Object { @{ From=(Join-Path $PSScriptRoot $_); To=$_ } })
 $artifacts += New-VerifiedPackage "KellysDOORMAN-$packageVersion-SOURCE" $sourceFiles
@@ -112,7 +114,7 @@ $record = [ordered]@{
     configurationImpact='Maps view is read-only with a scoped OS watcher and no persisted settings or cache. Existing configs/favourites preserved; no server settings changed. Explicit saved-list actions create portable JSON and backups in BepInEx/plugins/DOORMAN-Lists and a local hash-bound content receipt in BepInEx/cache/doorman-content-inventory.json. Loading uses the existing normal profile/reload/restart transaction. Return tickets and other caches retain their documented behavior. Explicit ZIP updates may install plugin-bound JSON/images under BepInEx/plugins/DOORMAN-Metadata with per-file queue hashes/backups; legacy DLL-only queues remain readable. No bundled sample previews/images or player list files.'
     regressionChecks=[int]$match.Groups[1].Value
     installed=$false; published=$false; remotelyStaged=$false
-    priorInGameObservation='Aaron confirmed all 1.3.3 features worked in game on 6 October 2026: saved lists, Maps, scrollbars, a mod update and restart back to a server. The 1.3.4 audit fixes need the focused smoke check in docs/RELEASE-AUDIT.md; no 1.3.4 installation or restart was performed by this build.'
+    priorInGameObservation='Aaron confirmed all 1.3.3 features worked in game on 6 October 2026: saved lists, Maps, scrollbars, a mod update and restart back to a server. The 1.3.4 audit fixes need focused in-game cancellation/retry, repeated setup and recovery checks; no 1.3.4 installation or restart was performed by this build.'
     detachedLaunchProbe=if(Test-Path -LiteralPath (Join-Path $evidence 'explorer-parent-probe.json')) {Get-Content -LiteralPath (Join-Path $evidence 'explorer-parent-probe.json') -Raw | ConvertFrom-Json} else {$null}
     inGameAcceptance='1.3.3 feature acceptance confirmed by Aaron; 1.3.4 focused smoke check pending. Broader stress coverage remains unrecorded: all ten permanent scrollbar tracks/thumbs, wheel/drag/track clicks, wrapping, nested views and scaling; Maps tab scaling/default chart/embedded assets, add/change/remove notices, unsupported loader, async close/refresh and watcher cleanup; 1.3.4 saved-list UI/save/load/share, typing/scaling, missing/version warnings, dependency conflicts, cached disabled wrapper recovery and cancelled restarts; embedded previews on disabled wrappers, sidecar ZIP update and raw-DLL transition, manual overrides, interrupted per-file recovery; cancellation recovery restores Mods controls after closing/reopening during verification/bootstrap; repeated restart and broker timeout/plugin disposal; Steam session-release wait and bounded retry fallback, late/manual launch without duplicate dispatch; disabled content/wrapper images and custom plugin-only previews; Windows status UI/focus/DPI/cleanup; ordinary launch restores the saved profile and preserves unrelated client plugins; downloaded F-16 update through restart and actual Join; vanilla/modded/passworded joins, repeated A -> B -> A hot reload networking, NOMNOM fallback, clean install/upgrade and busy-mission runtime performance'
 }

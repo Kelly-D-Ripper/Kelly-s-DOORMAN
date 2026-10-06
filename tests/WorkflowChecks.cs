@@ -156,6 +156,10 @@ internal static class WorkflowRegression
         check(reload.Any(i=>i.Operand is MethodReference m&&m.Name=="PendingUpdates")&&reload.Any(i=>i.Operand is MethodReference m&&m.Name=="PromptRestart"),"Reload mods considers queued downloads and shows an explicit restart prompt");
         var snapshot=manager.Methods.Single(m=>m.Name=="Snapshot").Body.Instructions;
         check(snapshot.Any(i=>i.Operand is MethodReference m&&m.Name=="GetIP")&&snapshot.Any(i=>i.Operand is MethodReference m&&m.Name=="GetConnectionPort"),"dedicated snapshots use actual Steam connection details rather than empty UDP properties");
+        var ticketSource=manager.Methods.Single(m=>m.Name=="TicketContent").Body.Instructions;
+        check(new[]{"ObservedSourceLength","ObservedSourceWriteTicks","Digest"}.All(name=>ticketSource.Any(i=>i.Operand is FieldReference f&&f.Name==name)),"server ticket construction carries running source observations or an existing exact digest instead of inventing receipt freshness");
+        var hashing=manager.Methods.Single(m=>m.Name=="HashInventory").Body.Instructions;
+        check(hashing.Any(i=>i.Operand is MethodReference m&&m.Name=="VerifySourceObservation")&&hashing.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.FullName=="System.IO.FileSystemInfo"&&m.Name=="Refresh"),"restart hashing uses the tested source-binding gate and checks for disk changes during verification");
         check(calls.Any(m=>m.Name=="VerifyPending")&&calls.Any(m=>m.Name=="RestartMods"),"both restart workflows verify queued updates before normal exit");
         var scene=manager.Methods.Single(m=>m.Name=="SceneLoaded").Body.Instructions;
         check(scene.Any(i=>i.Operand is MethodReference m&&m.Name=="BeginMenuAttachment")&&scene.Any(i=>i.Operand is MethodReference m&&m.Name=="AttachBrowserAfterFrame"),"menu and browser attachment have a scene-event fallback independent of cached Unity Start methods");
