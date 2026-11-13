@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable><AssemblyName>KellysDOORMANRestart</AssemblyName><Version>1.4.0</Version><NuGetAudit>false</NuGetAudit><RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources></PropertyGroup>
+  <PropertyGroup><PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))=C:\DOORMAN-SOURCE</PathMap></PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms" /><Reference Include="System.Drawing" />
+    <Compile Include="..\src\RestartStatus.cs" Link="RestartStatus.cs" />
+    <Compile Include="..\src\RestartLaunchFailure.cs" Link="RestartLaunchFailure.cs" />
+  </ItemGroup>
+</Project>
+

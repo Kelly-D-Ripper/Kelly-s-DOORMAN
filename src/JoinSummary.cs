@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace KellysJOINCHECK
 {
@@ -8,6 +9,8 @@ namespace KellysJOINCHECK
     internal sealed class ModAction
     {
         public string Action = "", Name = "", Instruction = "";
+        public string GitHub = "", PackageId = "", Version = "";
+        public bool Download=false, Bundle=false;
     }
     internal sealed class JoinSummary
     {
@@ -15,7 +18,22 @@ namespace KellysJOINCHECK
         public string Title = "Mod list unavailable", Help = "Ask the host for their required mod list.";
         public readonly List<ModAction> Actions = new List<ModAction>();
         public readonly List<ModAction> Matching = new List<ModAction>();
-        public static JoinSummary Create(string server, string local, string serverWire, string localWire, string failure)
+        internal string PlayerStatus(string workflowMessage)
+            =>!string.IsNullOrWhiteSpace(workflowMessage)?workflowMessage:Status==JoinStatus.Match?"Mods ready. Click Join server.":Help;
+        internal string PlayerDetails()
+        {
+            var text=new StringBuilder();
+            if(Help.Length>0)text.AppendLine(Help);
+            foreach(var action in Actions)
+                text.Append('\n').Append(action.Action).Append(": ").AppendLine(action.Name).AppendLine(action.Instruction);
+            if(Matching.Count>0)
+            {
+                text.Append("\nMatching mods (").Append(Matching.Count).AppendLine("):");
+                foreach(var item in Matching)text.Append(item.Name).Append(": ").AppendLine(item.Instruction);
+            }
+            return text.Append("\nFor technical details, press Copy report.").ToString().Trim();
+        }
+        public static JoinSummary Create(string server, string local, string serverWire, string localWire, string failure,IEnumerable<string>? compatibilityExclusions=null,MapJoinDiagnostic? mapDiagnostic=null)
         {
             var view = new JoinSummary();
             var wanted = Signature.Parse(server); var mine = Signature.Parse(local);
@@ -23,7 +41,11 @@ namespace KellysJOINCHECK
             bool map = failure.StartsWith("MAP UNAVAILABLE:", StringComparison.OrdinalIgnoreCase);
             if (build || (server.Length > 0 && wanted.Game != mine.Game))
                 view.Actions.Add(new ModAction { Action = "UPDATE", Name = "Nuclear Option", Instruction = build ? "Use the host's game update and Steam beta branch." : "Use version " + Diagnostics.Clean(wanted.Game) + ". You have " + Diagnostics.Clean(mine.Game) + "." });
-            if (map) view.Actions.Add(new ModAction { Action = "INSTALL", Name = "Server map", Instruction = "Get the host's exact map package and version." });
+            if (map) view.Actions.Add(new ModAction { Action = "CHECK MAP", Name = mapDiagnostic?.Name ?? "Server map", Instruction = mapDiagnostic?.Instruction ?? "The map loader could not load this map. Check the host's map and your map loader, then restart.", GitHub=mapDiagnostic?.Repository??"" });
+            if((compatibilityExclusions??Array.Empty<string>()).Contains(ServerCompatibilityPlugins.Resolute,StringComparer.Ordinal))
+                view.Actions.Add(new ModAction { Action="DISABLE",Name="Resolute",Instruction="This server does not use Resolute. Setup mods will disable it for this session, then ask you to restart." });
+            if((compatibilityExclusions??Array.Empty<string>()).Any(ServerCompatibilityPlugins.IsGrowler))
+                view.Actions.Add(new ModAction { Action="DISABLE",Name=ServerCompatibilityPlugins.GrowlerName,Instruction="This pack changes the Ifrit and multiplayer compatibility. Setup mods disables its components for this session, then asks you to restart. Your normal mod list is preserved." });
             if (wanted.Complete && mine.Complete)
             {
                 foreach (var mod in wanted.Mods.OrderBy(x => x.Key, StringComparer.Ordinal))
@@ -59,7 +81,7 @@ namespace KellysJOINCHECK
             }
             return view;
         }
-        private static string Friendly(string name) => name == "com.nikkorap.blueprinter" ? "Blueprinter" : Diagnostics.Clean(name).Replace('_', ' ');
+        private static string Friendly(string name) => name == "com.nikkorap.blueprinter" ? "Blueprinter" : GameplayFingerprintUi.Name(name);
     }
     internal static class JoinLayout
     {
@@ -79,12 +101,15 @@ namespace KellysJOINCHECK
             result.TitleHeight = Math.Max(34, titleHeight);
             result.ServerTop = Margin + result.TitleHeight + 6;
             result.HelpTop = result.ServerTop + 26 + Gap;
-            result.HelpHeight = Math.Max(28, helpHeight);
-            result.ListTop = result.HelpTop + result.HelpHeight + Gap;
             result.FooterHeight = Math.Max(24, footerHeight);
             result.FooterBottom = Margin + ActionHeight + Gap;
             result.ListBottom = result.FooterBottom + result.FooterHeight + Gap;
             if (matching) result.ListBottom += MatchingHeight + Gap;
+            // Long errors remain available in the scrolling status card instead
+            // of squeezing the list to a few pixels on a small side panel.
+            float maxHelp=Math.Min(104,Math.Max(28,height-result.HelpTop-Gap-result.ListBottom-140));
+            result.HelpHeight = Math.Min(Math.Max(28,helpHeight),maxHelp);
+            result.ListTop = result.HelpTop + result.HelpHeight + Gap;
             result.ListHeight = Math.Max(0, height - result.ListTop - result.ListBottom);
             return result;
         }
@@ -94,3 +119,4 @@ namespace KellysJOINCHECK
         public float TitleHeight, ServerTop, HelpTop, HelpHeight, ListTop, ListBottom, ListHeight, FooterBottom, FooterHeight;
     }
 }
+

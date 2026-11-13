@@ -30,6 +30,7 @@ namespace KellysJOINCHECK
         private BrowserDiscovery? discovery;
         private Coroutine? queuedSearch;
         private bool dedicatedEmpty;
+        private bool clearForVersionChange;
         private readonly SteamLobby manager;
         private readonly MethodInfo serverBusy;
         private readonly FieldInfo playerBusy;
@@ -65,7 +66,7 @@ namespace KellysJOINCHECK
                 hint = Text("Hint",toolbar,14); hint.text = DefaultHint; hint.color = LobbyListItem.TextMutedColor;
                 hint.rectTransform.anchorMin = new Vector2(0,0); hint.rectTransform.anchorMax = new Vector2(1,0); hint.rectTransform.offsetMin = new Vector2(12,4); hint.rectTransform.offsetMax = new Vector2(-12,25);
                 var incompatible = Check("Show incompatible servers",0,.62f,settings.ShowIncompatible.Value,value=>
-                { settings.ShowIncompatible.Value = value; hint.text = DefaultHint; list.GetListOfLobbies(); });
+                { settings.ShowIncompatible.Value = value; clearForVersionChange=true; hint.text = DefaultHint; list.GetListOfLobbies(); });
                 incompatible.interactable = settings.QueryAvailable;
                 if (!settings.QueryAvailable) hint.text = "Version filter unavailable for this game build.";
                 favouritesToggle = Check("Only favourites",.62f,1,settings.OnlyFavourites.Value,value=>
@@ -82,7 +83,28 @@ namespace KellysJOINCHECK
         }
         private string DefaultHint => "Show incompatible: "+(settings.ShowIncompatible.Value ? "ON" : "OFF")+". "+
             (settings.Favourites.Count==0 ? "No favourites yet. Star a server to save it." : "Other browser filters still apply.");
-        internal void BeginSearch() { localVersion = Compatibility.Wire; dedicatedEmpty=false; hint.text="Searching servers..."; }
+        internal void BeginSearch()
+        {
+            if(clearForVersionChange) { ClearPreviousVersionResults();clearForVersionChange=false; }
+            localVersion = Compatibility.Wire; dedicatedEmpty=false; hint.text="Searching servers...";
+        }
+        private void ClearPreviousVersionResults()
+        {
+            // The native browser deliberately keeps old results after an empty
+            // refresh. That is misleading when the version filter changed.
+            // Return its rows through the same pool used by native pruning.
+            var all=Field<Dictionary<LobbyInstance,LobbyListItem>>(list,"allLobbies") ?? throw new MissingFieldException("allLobbies");
+            var pool=Field<Stack<LobbyListItem>>(list,"pool") ?? throw new MissingFieldException("pool");
+            var sorted=sortListField.GetValue(list) as List<LobbyListItem> ?? throw new MissingFieldException("sortList");
+            foreach(var pair in new List<KeyValuePair<LobbyInstance,LobbyListItem>>(all))
+            {
+                var item=pair.Value;
+                if(item!=null) { item.Hide();pool.Push(item); }
+                all.Remove(pair.Key);
+            }
+            sorted.Clear();
+            updateList.Invoke(list,null);
+        }
         private bool SearchBusy => (bool)serverBusy.Invoke(manager,null) || (bool)playerBusy.GetValue(manager);
         internal bool BeforeSearch()
         {

@@ -32,6 +32,7 @@ namespace KellysJOINCHECK
         private static Action<string>? warn;
         private static Action<string>? info;
         [ThreadStatic] private static BrowserUi? queryingBrowser;
+        private static LobbyList? savedServerBrowser;
         private static readonly Dictionary<LobbyList,BrowserUi> browsers = new Dictionary<LobbyList,BrowserUi>();
         internal static void Initialize(Harmony harmony,ConfigFile config,Action<string> warning,Action<string> status)
         {
@@ -89,11 +90,26 @@ namespace KellysJOINCHECK
         // existing Steam query. Direct joins, authentication and other queries are untouched.
         private static LobbySearchFilter ApplyQueryOption(LobbySearchFilter filter)
         {
+            filter=SavedServerQuery(filter);
             filter.ignoreVersionFilter |= settings?.ShowIncompatible.Value == true;
             foreach (var ui in browsers.Values)
                 try { ui.BeginSearch(); } catch (Exception ex) { Warn("Browser version unavailable: "+ex.GetType().Name); }
             return filter;
         }
+        private static LobbySearchFilter SavedServerQuery(LobbySearchFilter filter)
+        {
+            if(savedServerBrowser!=null&&browsers.TryGetValue(savedServerBrowser,out var saved)&&ReferenceEquals(queryingBrowser,saved))
+            {
+                // The one return lookup uses the same working dedicated discovery
+                // as a normal browser search, without rewriting saved filters.
+                savedServerBrowser=null;
+                filter=new LobbySearchFilter { ignoreVersionFilter=true,distanceFilter=Steamworks.ELobbyDistanceFilter.k_ELobbyDistanceFilterWorldwide };
+            }
+            return filter;
+        }
+        internal static void RequestSavedServer(LobbyList browser)
+        { if(!browsers.ContainsKey(browser))throw new InvalidOperationException("The server browser is not ready.");savedServerBrowser=browser;browser.GetListOfLobbies(); }
+        internal static void EndSavedServerLookup(LobbyList browser){if(savedServerBrowser==browser)savedServerBrowser=null;}
         private static void BrowserStartPrefix(LobbyList __instance)
         {
             if (settings==null || browsers.ContainsKey(__instance)) return;
@@ -104,8 +120,19 @@ namespace KellysJOINCHECK
             }
             catch (Exception ex) { Warn("Browser controls unavailable: "+ex); }
         }
+        internal static void EnsureControls()
+        {
+            foreach(var pair in browsers.Where(p=>p.Key==null).ToArray()){browsers.Remove(pair.Key);pair.Value.Dispose(false);}
+            foreach(var browser in UnityEngine.Resources.FindObjectsOfTypeAll<LobbyList>().Where(b=>b&&b.isActiveAndEnabled&&b.gameObject.scene.IsValid()))
+            {
+                if(browsers.ContainsKey(browser))continue;
+                BrowserStartPrefix(browser);
+                if(browsers.ContainsKey(browser))try{browser.GetListOfLobbies();}catch(Exception ex){Warn("Recovered browser refresh unavailable: "+ex.Message);}
+            }
+        }
         private static void BrowserDestroyedPrefix(LobbyList __instance)
         {
+            EndSavedServerLookup(__instance);
             if (!browsers.TryGetValue(__instance,out var ui)) return;
             browsers.Remove(__instance); ui.Dispose(false);
         }
@@ -129,6 +156,7 @@ namespace KellysJOINCHECK
             foreach (var ui in owned) ui.Dispose();
             settings = null; warn = null; info = null; lastWarning = "";
             queryingBrowser=null;
+            savedServerBrowser=null;
         }
     }
 }

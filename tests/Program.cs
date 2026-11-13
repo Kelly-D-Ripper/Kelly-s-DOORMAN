@@ -20,8 +20,28 @@ internal static class Program
     private static string Read(Dictionary<string,string> data, string key) => data.TryGetValue(key, out var value) ? value : "";
     private static int Main(string[] args)
     {
-        string server = V("--Aryx_F99-v1.1.3_--MiG-15-v1.1.2_--Weapons-v1.1.1");
-        string local = V("--Aryx_F99-v1.1.2_--Chimera-v1.2.0_--Weapons-v1.1.1");
+        if(args.Length==3&&args[0]=="--real-su30-setup")return Su30SetupChecks.RealProbe(args[1],args[2]);
+        if(args.Length==4&&args[0]=="--real-su30-setup")return Su30SetupChecks.RealProbe(args[1],args[2],"",args[3]);
+        if(args.Length==5&&args[0]=="--fixture-su30-setup")return Su30SetupChecks.RealProbe(args[1],args[2],args[3],args[4]);
+        if(args.Length==4&&args[0]=="--real-map-probe")return ServerMapUpdateChecks.RealProbe(args[1],args[2],args[3]);
+        if(args.Length==3&&args[0]=="--real-ironjaw-setup")return IronjawUpdateChecks.RealSetupProbe(args[1],args[2]);
+        if(args.Length==4&&args[0]=="--prepare-isolated-map-run")return IronjawUpdateChecks.PrepareIsolatedRun(args[1],args[2],args[3]);
+        if(args.Length==3&&args[0]=="--real-shipyard-probe")return ShipyardSetupChecks.RealProbe(args[1],args[2]);
+        if(args.Length==2&&args[0]=="--real-update-probe")return UpdateRegression.RealVersionProbe(args[1]);
+        Su30SetupChecks.Run(Check);
+        AddonRemovalChecks.Run(Check,args[1]);
+        var updateKeys=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var updateFixture=new ModEntry {Id="aircraft.test",UpdateRepository="Author/Aircraft",UpdateVersion="1.0"};
+        var otherFixture=new ModEntry {Id="aircraft.other",UpdateRepository="Author/Other",UpdateVersion="1.0"};
+        var selfFixture=new ModEntry {Id="kelly.nuclearoption.joincheck"};
+        updateKeys.Add(ModMenuEntries.UpdateKey(updateFixture).ToUpperInvariant());
+        Check(ModMenuEntries.HasUpdate(updateFixture,updateKeys,false),"update filter matches notification keys case insensitively");
+        Check(!ModMenuEntries.HasUpdate(otherFixture,updateKeys,false),"update filter excludes unrelated mods");
+        otherFixture.UpdateRepository=updateFixture.UpdateRepository;otherFixture.UpdateVersion="2.0";
+        Check(!ModMenuEntries.HasUpdate(otherFixture,updateKeys,false),"update filter keeps installed versions distinct");
+        Check(!ModMenuEntries.HasUpdate(selfFixture,updateKeys,false)&&ModMenuEntries.HasUpdate(selfFixture,updateKeys,true),"DOORMAN update uses its own state");
+        string server = V("--Aryx_F99-v1.1.3_--MiG-15-v1.2.0_--Weapons-v1.2.0");
+        string local = V("--Aryx_F99-v1.2.0_--Chimera-v1.2.0_--Weapons-v1.2.0");
         string result = Diagnostics.Compare(server, local);
         Check(result.Contains("MISSING: MiG-15"), "missing bundle");
         Check(result.Contains("WRONG VERSION: Aryx_F99"), "underscore name and wrong version");
@@ -41,8 +61,8 @@ internal static class Program
         var checklist = JoinSummary.Create(server, local, server, local, "");
         Check(checklist.Status == JoinStatus.Changes && checklist.Actions.Count == 3, "only three actionable differences in checklist");
         Check(checklist.Title == "3 changes needed", "plain summary count");
-        Check(checklist.Actions.Any(x => x.Action == "INSTALL" && x.Name == "MiG-15" && x.Instruction.Contains("1.1.2")), "missing checklist action");
-        Check(checklist.Actions.Any(x => x.Action == "CHANGE VERSION" && x.Name == "Aryx F99" && x.Instruction.Contains("1.1.3") && x.Instruction.Contains("1.1.2")), "friendly name and both versions");
+        Check(checklist.Actions.Any(x => x.Action == "INSTALL" && x.Name == "MiG-15" && x.Instruction.Contains("1.2.0")), "missing checklist action");
+        Check(checklist.Actions.Any(x => x.Action == "CHANGE VERSION" && x.Name == "Aryx F99" && x.Instruction.Contains("1.1.3") && x.Instruction.Contains("1.2.0")), "friendly name and both versions");
         Check(checklist.Actions.Any(x => x.Action == "REMOVE" && x.Name == "Chimera"), "extra checklist action");
         Check(checklist.Matching.Count == 2 && checklist.Matching.Any(x => x.Name == "Blueprinter"), "matching mods separate and loader name readable");
         Check(!checklist.Help.Contains("hash") && !checklist.Help.Contains("compatibility"), "main instruction contains no implementation details");
@@ -55,7 +75,20 @@ internal static class Program
         var build = JoinSummary.Create(server,server,server,server,"Different game build: abc");
         Check(build.Actions.Any(x => x.Name == "Nuclear Option" && x.Action == "UPDATE"), "build error overrides matching mods");
         var map = JoinSummary.Create(server,server,server,server,"MAP UNAVAILABLE: cm.test.abc");
-        Check(map.Actions.Any(x => x.Name == "Server map"), "map error remains actionable when mods match");
+        Check(map.Actions.Any(x => x.Name == "Server map" && x.Action == "CHECK MAP"), "unknown map error remains actionable without claiming it is missing");
+        var oldAlps = MapJoinDiagnostic.Create("cm.swissalps.3363c1ec", "GameWorldPrefab", "Swiss Alps", new[] {new RegisteredMap {Key="cm.swissalps.5e83b9c6",Name="Swiss Alps"}});
+        Check(oldAlps.Name == "Swiss Alps" && oldAlps.Instruction.Contains("3363c1ec") && oldAlps.Instruction.Contains("5e83b9c6"), "server and locally registered Alps builds are distinguished");
+        Check(oldAlps.Report.Contains("cm.swissalps.3363c1ec") && oldAlps.Report.Contains("cm.swissalps.5e83b9c6"), "copy report includes actual requested and loaded map keys");
+        var alpsCard=JoinSummary.Create(server,server,server,server,oldAlps.Report,null,oldAlps).Actions.Single();
+        Check(alpsCard.Name == "Swiss Alps" && alpsCard.Action == "CHECK MAP" && alpsCard.Instruction.Contains("5e83b9c6"), "map mismatch is named even when all mods match");
+        var noAlps=MapJoinDiagnostic.Create("cm.swissalps.3363c1ec", "GameWorldPrefab", "Swiss Alps", Array.Empty<RegisteredMap>());
+        Check(noAlps.Name == "Swiss Alps" && noAlps.Instruction.Contains("not registered") && !noAlps.Instruction.Contains("not installed"), "missing registration does not assert that a file is absent");
+        var registeredAlps=MapJoinDiagnostic.Create("cm.swissalps.3363c1ec", "GameWorldPrefab", "", new[] {new RegisteredMap {Key="cm.swissalps.3363c1ec",Name="Swiss Alps"}});
+        Check(registeredAlps.Instruction.Contains("registered") && registeredAlps.Instruction.Contains("could not load"), "a rejected registered map is not described as a missing or old file");
+        var separate=MapJoinDiagnostic.Create("cm.swissalps.3363c1ec", "GameWorldPrefab", "Swiss Alps", new[] {new RegisteredMap {Key="cm.othermap.5e83b9c6",Name="Other Map"}});
+        Check(separate.Name == "Swiss Alps" && separate.Report.Contains("none registered"), "unrelated maps never become the player's version");
+        var odd=MapJoinDiagnostic.Create("cm.swissalps.invalid\nFAKE", "GameWorldPrefab", "", Array.Empty<RegisteredMap>());
+        Check(odd.Name == "Server map" && !odd.Instruction.Contains("not registered"), "invalid custom map keys use neutral guidance");
         Check(JoinSummary.Create(server,server,server,server,"Incorrect version").Status != JoinStatus.Match, "failed join never reassures ready");
         Check(JoinSummary.Create("0.35_xxxxxxxxxxxx",local,"0.35_xxxxxxxxxxxx",local,"").Actions.Any(x => x.Name == "Nuclear Option"), "known game mismatch retained with unknown mod data");
         Check(JoinSummary.Create(V("--A-v1_--B-v1"),V("--B-v1_--A-v1"),"wire1","wire2","").Actions.Single().Action == "CHECK FILES", "order-only actionable guidance");
@@ -81,10 +114,28 @@ internal static class Program
             Check(geometry.FooterBottom >= 20+JoinLayout.ActionHeight+JoinLayout.Gap, "footer cannot overlap action buttons");
             Check(geometry.ListTop+geometry.ListHeight+geometry.ListBottom <= panelHeight, "all reserved regions fit the panel");
         }
+        var crowded=JoinLayout.Measure(468,34,400,24,false);
+        Check(crowded.ListHeight>=140&&crowded.HelpHeight<400,"long setup errors leave room for the scrollable checklist");
+        var downloadLayout=JoinLayout.Measure(640-2*(JoinLayout.ActionHeight+JoinLayout.Gap)-22,34,900,24,true);
+        Check(downloadLayout.ListHeight>=140,"download progress and both restart choices retain a usable checklist");
+        Check(JoinLayout.Measure(900,34,900,24,false).HelpHeight<=104,"a long workflow message stays compact even in a tall checklist");
         ServerCacheChecks();
         FavouriteChecks();
+        ServerDownloadResolverChecks.Run(Check);
+        SavedListRegression.Run(Check);
+        ModMenuRegression.Run(Check);
+        RequisiteRegression.Run(Check);
+        RequisiteSelectionRegression.Run(Check);
+        InstalledContentRegression.Run(Check);
+        MapFilesRegression.Run(Check);
+        MapPackageRegression.Run(Check);
+        ServerMapUpdateChecks.Run(Check);
+        IronjawUpdateChecks.Run(Check);
+        SelfUpdatePackageRegression.Run(Check);
+        SelfUpdateTransactionRegression.Run(Check);
         IconChecks();
         ServerFilterChecks();
+        NosmrChecks();
         QueryPatchChecks();
         var encoded = Protocol.Encode("0.34_a1b2c3d4e5f6", server);
         Check(Protocol.Decode(k => Read(encoded,k), "0.34_a1b2c3d4e5f6") == server, "hashed metadata roundtrip");
@@ -117,7 +168,7 @@ internal static class Program
             string garbage = Convert.ToBase64String(Enumerable.Range(0, rng.Next(1,65)).Select(_ => (byte)rng.Next(256)).ToArray());
             Check(Protocol.Decode(k => k == Protocol.Header ? "1:1" : garbage, "0.34") == null, "malformed metadata " + i);
         }
-        if (args.Length != 3) throw new Exception("Expected game directory, client DLL, server DLL");
+        if (args.Length != 5 && args.Length != 6) throw new Exception("Expected game directory, client DLL, server DLL, startup DLL, restart helper and optional Blueprinter validation DLL");
         var game = AssemblyDefinition.ReadAssembly(Path.Combine(args[0], "NuclearOption_Data", "Managed", "Assembly-CSharp.dll"));
         var client = AssemblyDefinition.ReadAssembly(args[1]);
         var host = AssemblyDefinition.ReadAssembly(args[2]);
@@ -129,6 +180,8 @@ internal static class Program
         Contract(game, lobbies+"LobbyDetailsModal", "Show", "System.Void", lobbies+"LobbyList", lobbies+"LobbyInstance");
         Contract(game, lobbies+"LobbyDetailsModal", "Hide", "System.Void");
         Contract(game, lobbies+"LobbyList", "Start", "System.Void");
+        Contract(game, "MainMenu", "SelectMultiplayer", "System.Void");
+        Contract(game, lobbies+"LobbyList", "ShowLobbyPopup", "System.Void",lobbies+"LobbyInstance");
         Contract(game, lobbies+"LobbyList", "OnDestroy", "System.Void");
         Contract(game, lobbies+"LobbyList", "GetListOfLobbies", "System.Void");
         Contract(game, lobbies+"LobbyList", "UpdateLobbyList", "System.Void");
@@ -136,7 +189,7 @@ internal static class Program
         Contract(game, lobbies+"LobbyListItem", "Show", "System.Boolean",lobbies+"LobbyList",lobbies+"LobbyInstance");
         Contract(game, lobbies+"SteamLobby", "GetLobbiesList", "System.Void",lobbies+"LobbySearchFilter");
         Contract(game,lobbies+"SteamLobby/ServerListRequest","RequestServerLobbies","System.Void",lobbies+"LobbySearchFilter");
-        Contract(game,lobbies+"SteamLobby/ServerListRequest","OnServerUpdated","System.Void","Steamworks.gameserveritem_t",lobbies+"LobbySearchFilter");
+        Contract(game,lobbies+"SteamLobby/ServerListRequest","OnServerUpdated","System.Void","Steamworks.gameserveritem_t");
         Contract(game,lobbies+"SteamLobby/ServerListRequest","OnRefreshComplete","System.Void","Steamworks.HServerListRequest","Steamworks.EMatchMakingServerResponse");
         Contract(game,lobbies+"SteamLobby/ServerListRequest","set_InProgress","System.Void","System.Boolean");
         Contract(game,lobbies+"SteamLobby/ServerListRequest","set_searchNumber","System.Void","System.Int32");
@@ -167,7 +220,8 @@ internal static class Program
         Contract(game, "NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption", "HandleBuildHashMismatch", "System.Void", "Mirage.INetworkPlayer", "NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption/BuildHashMismatch");
         Contract(game, "NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption", "GetBuildHash", "System.UInt32");
         Check(game.MainModule.GetType(lobbies+"DedicatedServerKeyValues").Fields.Any(x => x.Name == "keyValues" && x.FieldType.FullName == "System.Collections.Generic.Dictionary`2<System.String,System.String>"), "server budget field contract");
-        Check(game.MainModule.GetType(lobbies+"DedicatedServerKeyValues").Fields.Any(x => x.Name == "tags" && x.FieldType.FullName == "System.Collections.Generic.Dictionary`2<System.String,System.String>"), "actual advertised version can be read from tags");
+        Check(game.MainModule.GetType(lobbies+"DedicatedServerKeyValues").Fields.Any(x => x.Name == "tags" && x.FieldType.FullName == "System.Collections.Generic.Dictionary`2<System.Char,System.String>") &&
+            game.MainModule.GetType(lobbies+"DedicatedServerKeyValues").Fields.Any(x=>x.Name=="TAG_HOST_VERSION" && Convert.ToChar(x.Constant)=='v'), "actual advertised version can be read from 0.34.5 char-keyed tags");
         var steam = AssemblyDefinition.ReadAssembly(Path.Combine(args[0],"NuclearOption_Data","Managed","com.rlabrecque.steamworks.net.dll"));
         Contract(steam,"Steamworks.SteamGameServer","ClearAllKeyValues","System.Void");
         Contract(steam,"Steamworks.SteamMatchmaking","GetLobbyOwner","Steamworks.CSteamID","Steamworks.CSteamID");
@@ -183,25 +237,29 @@ internal static class Program
         var hostTypes = AllTypes(host.MainModule.Types).ToArray();
         Check(!hostTypes.SelectMany(t=>t.Methods).Any(m=>new[]{"Update","FixedUpdate","LateUpdate","OnGUI"}.Contains(m.Name)), "server has no gameplay or frame callbacks");
         var serverPaths = host.MainModule.GetType("KellysJOINCHECK.ServerPlugin").Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).ToArray();
-        Check(!serverPaths.Any(i=>i.Operand is MethodReference m && m.DeclaringType.Name.Contains("DisplayClass")), "server callbacks do not allocate capturing closures");
+        Check(!serverPaths.Any(i=>i.Operand is MethodReference m && m.DeclaringType.Name.Contains("DisplayClass")), "server callbacks use cached observers without per-advertisement capturing closures");
         Check(!serverPaths.Any(i=>i.Operand is MethodReference m && (m.Name=="get_version" || m.Name=="get_Wire" || (m.Name=="Expanded" && m.Parameters.Count==0))), "server does not repeatedly call the Blueprinter-patched version getter");
-        Check(!Calls(host,"StartCoroutine") && !Calls(host,"InvokeRepeating"), "server does not schedule recurring work");
-        Check(!hostTypes.SelectMany(t=>t.Methods).Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m && (m.DeclaringType.FullName.StartsWith("System.Net.") || m.DeclaringType.FullName.StartsWith("System.Threading."))), "server starts no threads, timers or extra network requests");
-        Check(client.Name.Version.ToString(3)=="1.0.0" && host.Name.Version.ToString(3)=="1.0.0", "both components use the stable 1.0 release version");
+        Check(!Calls(host,"InvokeRepeating"), "server has no recurring fingerprint polling timer");
+        Check(!hostTypes.SelectMany(t=>t.Methods).Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m && m.DeclaringType.FullName.StartsWith("System.Net.")), "server fingerprint checks make no extra HTTP or socket requests");
+        Check(!serverPaths.Any(i=>i.Operand is MethodReference m && (m.DeclaringType.FullName.StartsWith("System.IO.File")||m.DeclaringType.FullName.StartsWith("Mono.Cecil")||m.DeclaringType.FullName.StartsWith("System.Security.Cryptography"))), "server advertisement callbacks do not read, inspect or hash files");
+        Check(client.Name.Version.ToString(3)=="1.4.0" && host.Name.Version.ToString(3)=="1.1.0", "candidate client and fingerprint server versions are distinct");
         var clientMetadata = client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         var serverMetadata = host.MainModule.GetType("KellysJOINCHECK.ServerPlugin").CustomAttributes.Single(a=>a.AttributeType.FullName=="BepInEx.BepInPlugin").ConstructorArguments;
         Check((string)clientMetadata[0].Value=="kelly.nuclearoption.joincheck" && (string)serverMetadata[0].Value=="kelly.nuclearoption.joincheck.server", "rename retains distinct legacy plugin IDs and existing config ownership");
         Check((string)clientMetadata[1].Value=="Kelly's DOORMAN" && (string)serverMetadata[1].Value=="Kelly's DOORMAN Server", "both displayed plugin names use the new branding");
-        Check((string)clientMetadata[2].Value=="1.0.0" && (string)serverMetadata[2].Value=="1.0.0", "BepInEx loader metadata matches each component's numeric version");
+        Check((string)clientMetadata[2].Value=="1.4.0" && (string)serverMetadata[2].Value=="1.1.0", "BepInEx loader metadata matches each component's numeric version");
         Check(!Diagnostics.Compare(server,local).Contains('\u2014'), "public diagnostics use plain punctuation");
         Check(!Calls(client, "set_version") && !Calls(host, "set_version"), "compatibility identifier not replaced");
         Check(Calls(client,"GetWorldCorners") && Calls(client,"GetPreferredValues"), "native docking and wrapping present");
-        Check(!Calls(client,"set_sprite") && !Calls(client,"set_fillCenter"), "panel and buttons cannot inherit a transparent native sprite centre");
-        Check(!Calls(client,"Instantiate"), "no native controllers or persistent listeners cloned");
+        Check(!client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi").Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m&&(m.Name=="set_sprite"||m.Name=="set_fillCenter")), "join panel and buttons cannot inherit a transparent native sprite centre");
+        var joinUi=client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi");
+        Check(!joinUi.Methods.Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).Any(i=>i.Operand is MethodReference m&&m.Name=="Instantiate"), "checklist does not clone native controllers or listeners");
+        var attach=client.MainModule.GetType("KellysJOINCHECK.ModManager").Methods.Single(m=>m.Name=="Attach");
+        Check(attach.Body.Instructions.Any(i=>i.Operand is MethodReference m&&m.Name=="set_onClick"), "cloned Mods button replaces inherited menu listeners");
         Check(!Calls(client,"StartClient") && !Calls(client,"StartHost"), "checklist buttons do not trigger networking");
         var browserHook = client.MainModule.GetType("KellysJOINCHECK.BrowserHooks");
         var rewrite = browserHook.Methods.Single(m=>m.Name=="ApplyQueryOption");
-        Check(rewrite.Body.Instructions.Where(i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Stfld).All(i=>i.Operand is FieldReference f && f.Name=="ignoreVersionFilter"), "query rewrite changes only version-filter flag");
+        Check(rewrite.Body.Instructions.Where(i=>i.OpCode.Code==Mono.Cecil.Cil.Code.Stfld).All(i=>i.Operand is FieldReference f && f.Name=="ignoreVersionFilter"), "ordinary browser query controls only version-filter flag");
         Check(!Calls(client,"AddRequestLobbyListStringFilter") && !Calls(client,"AddRequestLobbyListDistanceFilter"), "native query builds all filters");
         Check(!Calls(client,"SetLobbyData") && !Calls(client,"SetKeyValue") && !Calls(client,"AddFavoriteGame"), "browser settings stay local and do not write Steam/server metadata");
         var browserUi = client.MainModule.GetType("KellysJOINCHECK.BrowserUi");
@@ -217,8 +275,8 @@ internal static class Program
         var session=client.MainModule.GetType("KellysJOINCHECK.BrowserServerList");
         Check(session.Fields.Any(f=>f.Name=="response") && session.Fields.Any(f=>f.Name=="request"), "server request and callback stay alive until browser disposal");
         var start=session.Methods.Single(m=>m.Name=="Start").Body.Instructions;
-        Check(start.Count(i=>i.Operand is MethodReference m && m.Name=="RefreshQuery")==1 && start.Count(i=>i.Operand is MethodReference m && m.Name=="RequestInternetServerList")==1, "known server lists refresh in place and empty lists allow a new discovery");
-        var release=session.Methods.Single(m=>m.Name=="Release").Body.Instructions;
+        Check(start.Count(i=>i.Operand is MethodReference m && m.Name=="RequestInternetServerList")==1 && !start.Any(i=>i.Operand is MethodReference m && m.Name=="RefreshQuery") && session.Methods.Single(m=>m.Name=="Completed").Body.Instructions.Any(i=>i.Operand is MethodReference m && m.Name=="RefreshQuery"), "each server search discovers newly started servers and falls back to refreshing known servers if discovery is empty");
+        var release=session.Methods.Single(m=>m.Name=="ReleaseHandle").Body.Instructions;
         Check(release.Any(i=>i.Operand is MethodReference m && m.Name=="CancelQuery") && release.Any(i=>i.Operand is MethodReference m && m.Name=="ReleaseRequest") && release.Any(i=>i.Operand is MethodReference m && m.Name=="KeepAlive"), "closing browser cancels discovery before releasing request and callback");
         Check(!Calls(host,"RequestInternetServerList") && !Calls(host,"RefreshQuery") && host.MainModule.GetType("KellysJOINCHECK.BrowserDiscovery")==null, "dedicated discovery repair is excluded from server companion");
         var scope=browserHook.Fields.Single(f=>f.Name=="queryingBrowser");
@@ -232,7 +290,59 @@ internal static class Program
         var lookups = client.MainModule.GetType("KellysJOINCHECK.NativeJoinUi").Methods.Where(m=>m.HasBody)
             .SelectMany(m=>m.Body.Instructions).Where(i=>i.Operand is MethodReference method && method.Name=="GetComponentInChildren").ToArray();
         Check(lookups.Length > 0 && lookups.All(i=>((MethodReference)i.Operand).Parameters.Count==1 && i.Previous.OpCode.Code==Mono.Cecil.Cil.Code.Ldc_I4_1), "native labels resolve while checklist root is inactive");
-        Check(client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").Methods.Where(m => m.Name.EndsWith("Prefix")).All(m => m.ReturnType.FullName == "System.Void"), "diagnostic prefixes cannot skip original join or authentication checks");
+        Check(client.MainModule.GetType("KellysJOINCHECK.ClientPlugin").Methods.Where(m => m.Name.EndsWith("Prefix")&&m.Name!="JoinPrefix").All(m => m.ReturnType.FullName == "System.Void"), "diagnostic prefixes do not skip original authentication checks");
+        ModRegression.Run(Check,client,host,args[0],args[3],args.Length==6?args[5]:null);
+        StateWriteSafetyRegression.Run(Check);
+        StartupUpdatePreflightRegression.Run(Check);
+        var listsManager=client.MainModule.GetType("KellysJOINCHECK.ModManager");
+        var listPreparation=listsManager.Methods.Single(m=>m.Name=="PrepareSavedList").Body.Instructions;
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="SavedModListPlan"&&m.Name=="Create")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="MenuSafety")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ValidateRequisiteSelection")
+            &&listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="ApplySelection"),"saved lists use planning, menu/dependency checks and the existing reload/restart transaction");
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.Name=="PromptConfirmation"),"saved version differences require confirmation before list application");
+        Check(listPreparation.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="NativeModsUi"&&m.Name=="Set"),"saved-list selection rebuilds visible rows so pending wrapper changes remain accessible after a cancelled restart");
+        Check(client.MainModule.GetType("KellysJOINCHECK.NativeModsUi").Methods.Single(m=>m.Name=="ShowLists").Body.Instructions.Any(i=>i.Operand is MethodReference m&&m.DeclaringType.Name=="NativeModListsUi"),"saved lists are attached to the existing native Mods UI");
+        Check(!new[]{client.MainModule.GetType("KellysJOINCHECK.NativeModListsUi"),client.MainModule.GetType("KellysJOINCHECK.NativeModsUi"),listsManager}
+            .SelectMany(t=>t.Methods.Where(m=>m.Name=="Tick")).SelectMany(m=>m.Body.Instructions)
+            .Any(i=>i.Operand is MethodReference m&&(m.DeclaringType.FullName.StartsWith("System.IO.")||m.DeclaringType.Name=="SavedModLists"||m.DeclaringType.Name=="InstalledContentMetadata")),"saved list tick paths never scan files or hash plugin sources");
+        Check(host.MainModule.GetType("KellysJOINCHECK.SavedModLists")==null&&host.MainModule.GetType("KellysJOINCHECK.InstalledContentMetadata")==null,"released server binary gains no saved-list runtime work");
+        PreviewRegression.Run(Check,client);
+        DoormanManifestRegression.Run(Check,client,args[1]);
+        MapBridgeChecks.Run(Check,client);
+        RequisiteUiChecks.Run(Check,client);
+        ScrollbarRegression.Run(Check,client);
+        UpdateRegression.Run(Check,client,host,args[3]);
+        StartupRegression.Run(Check,args[0],args[3],client);
+        WorkflowRegression.Run(Check,client,args[4],args[0]);
+        ContentSourceRegression.Run(Check);
+        ContentSourceRegression.Contracts(client,Check);
+        OpaqueCompatibilityRegression.Run(Check);
+        OpaqueCompatibilityRegression.Contracts(client,host,Check);
+        RestartLaunchFailureRegression.Run(Check);
+        Check(RuntimePlatform.CanUseWindowsRestartFor(PlatformID.Win32NT,false),"Windows uses its normal restart helper");
+        Check(!RuntimePlatform.CanUseWindowsRestartFor(PlatformID.Win32NT,true),"Wine does not use the Windows Explorer restart helper");
+        Check(!RuntimePlatform.CanUseWindowsRestartFor(PlatformID.Unix,false),"native Unix does not use the Windows restart helper");
+        ManualRestartRegression.Run(client,host,Check);
+        StartupDiagnosticsRegression.Run(Check,args[3]);
+        ServerCompatibilityPluginRegression.Run(Check);
+        GameplayFingerprintRegression.Run(Check);
+        AssetLoadingDiagnosticsRegression.Run(Check,client,host);
+        GameplayFingerprintSetupChecks.Run(Check);
+        ShipyardSetupChecks.Run(Check);
+        GameplayFingerprintIntegrationRegression.Run(Check,client,host);
+        GameplayFingerprintFileRegression.Run(Check);
+        SupportReportRegression.Run(Check);
+        DisabledModFileRegression.Run(Check);
+        DisabledRestoreQueueRegression.Run(Check);
+        DisabledContentRegression.Run(Check);
+        DisabledContentRegression.Contracts(client,Check);
+        NommDisabledCatalogRegression.Run(Check);
+        NommDisabledSelectionRegression.Run(Check);
+        NommDisabledWorkflowRegression.Run(Check);
+        NommDisabledWorkflowRegression.Contracts(Check,client,args[3]);
+        SupportCaptureChecks.Run(Check,client,host);
+        RestartRegression.Run(Check,args[4]);
         Console.WriteLine($"PASS: {checks} regression and game assembly contract checks.");
         Console.WriteLine(result);
         return 0;
@@ -252,6 +362,35 @@ internal static class Program
         }
         Check(BrowserIconGeometry.Check.Points.Length==8 && BrowserIconGeometry.StarFilled.Points.Length==11 && BrowserIconGeometry.StarOutline.Points.Length==40, "checkmark and filled/outline stars have distinct geometry");
     }
+    private static void NosmrChecks()
+    {
+        const string hostWire="0.34.3_1251c7efa051",localWire="0.34.3_39294f5a68c6";
+        Check(NosmrReport.CanAttemptJoin(false,true,false,false,false,hostWire,localWire),"reported matching versions permit an explicit native join attempt even with different wire hashes");
+        Check(!NosmrReport.CanAttemptJoin(true,true,false,false,false,hostWire,localWire)&&!NosmrReport.CanAttemptJoin(false,false,false,false,false,hostWire,localWire),"unverified reports and exact-file servers cannot use the reported-list join path");
+        Check(!NosmrReport.CanAttemptJoin(false,true,false,true,false,hostWire,localWire)&&!NosmrReport.CanAttemptJoin(false,true,false,false,true,hostWire,localWire)&&!NosmrReport.CanAttemptJoin(false,true,true,false,false,hostWire,localWire),"pending updates, a restart and active work block reported-list joins");
+        Check(!NosmrReport.CanAttemptJoin(false,true,false,false,false,"0.35_1251c7efa051",localWire),"reported-list joins still require the same game version");
+        var records=new[]{new NommRecord {Id="aryx.f99",Name="Shrike",Artifacts=new[]{new NommArtifact {Version="1.1.3"}}}};
+        var index=new NosmrReport.Index(records);
+        string body="[{\"id\":\"aryx.f99\",\"version\":\"1.1.3\"}]";
+        string hash="sha256:"+Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(body))).ToLowerInvariant();
+        var rules=new Dictionary<string,string>{{"nomm_v","2"},{"nomm_c","1"},{"nomm_d0",NosmrReport.Prefix("aryx.f99","1.1.3")},{"nomm_h0",hash.Substring(0,64)},{"nomm_h1",hash.Substring(64)},{"nomm_r0","aryx.f99"}};
+        string ReadRule(string k)=>rules.TryGetValue(k,out var v)?v:"";
+        var report=NosmrReport.Read(ReadRule,index);
+        Check(report!=null&&report.Verified&&report.Entries.Single().Name=="Shrike"&&report.Entries.Single().Required,"NOSMR v2 resolves and verifies a reported package and host required flag");
+        Check(NosmrReport.SupportStatus("","ready",null).Contains("query may still be pending"),"absent NOSMR metadata does not claim a completed query");
+        Check(NosmrReport.SupportStatus("2","loading",null).Contains("pending"),"support report distinguishes a pending catalogue");
+        Check(NosmrReport.SupportStatus("2","failed",null).Contains("failed"),"support report identifies a failed catalogue");
+        Check(NosmrReport.SupportStatus("2","ready",null).Contains("incomplete or invalid"),"support report identifies incomplete or invalid NOSMR metadata");
+        Check(NosmrReport.SupportStatus("2","ready",report).Contains("not proof"),"verified NOSMR status distinguishes reported from loaded files");
+        rules.Remove("nomm_d0");Check(NosmrReport.Read(ReadRule,index)==null,"incomplete NOSMR metadata does not produce a report");
+        rules["nomm_d0"]=NosmrReport.Prefix("aryx.f99","1.1.3");rules["nomm_h1"]="bad";Check(NosmrReport.Read(ReadRule,index)==null,"truncated NOSMR hash is rejected");
+        rules["nomm_h1"]=hash.Substring(64);rules["nomm_h0"]="sha256:"+new string('0',57);Check(NosmrReport.Read(ReadRule,index)==null,"NOSMR payload hash mismatch is rejected");
+        rules["nomm_h0"]=hash.Substring(0,64);rules["nomm_d0"]="7519dd";
+        var collision=new NosmrReport.Index(new[]{new NommRecord{Id="test1051",Name="A",Artifacts=new[]{new NommArtifact{Version="1.0"}}},new NommRecord{Id="test4128",Name="B",Artifacts=new[]{new NommArtifact{Version="1.0"}}}});
+        var unknown=NosmrReport.Read(ReadRule,collision);Check(unknown!=null&&!unknown.Verified&&!unknown.Entries.Single().Resolved,"ambiguous six-digit hashes are reported as unidentified");
+        rules["nomm_c"]="257";Check(NosmrReport.Read(ReadRule,index)==null,"NOSMR count is bounded");
+        Check(NosmrReport.IsKey("nomm_d255")&&!NosmrReport.IsKey("nomm_d256")&&!NosmrReport.IsKey("nomm_d01")&&!NosmrReport.IsKey("nomm_unrelated"),"only bounded NOSMR metadata keys are retained");
+    }
     private static void ServerFilterChecks()
     {
         const string tags="v=0.34.1,m=0,p=0,t=2,";
@@ -265,6 +404,13 @@ internal static class Program
         Check(!BrowserServerFilter.Matches("v=old,t=20",true,"other","2"), "mission tag comparison is exact");
         Check(BrowserServerFilter.Matches("t=2,v=0.34.1",false,"0.34.1","2"), "tag order and final comma do not matter");
         Check(!BrowserServerFilter.Matches("",false,"0.34.1",null) && !BrowserServerFilter.Matches("",true,"0.34.1","2"), "missing required tags remain filtered");
+        const string current="v0.34.3,m0,p0,t2,";
+        Check(BrowserServerFilter.Matches(current,false,"0.34.3",null), "0.34.5 dedicated servers use native compact version tags");
+        Check(BrowserServerFilter.Matches(current,false,"0.34.3","2"), "compact mission tags remain visible with the matching mission filter");
+        Check(!BrowserServerFilter.Matches(current,true,"old","1"), "compact mission filter rejects different missions");
+        Check(!BrowserServerFilter.Matches("v0.34.30,t20",false,"0.34.3","2"), "compact tag values cannot match a prefix");
+        Check(!BrowserServerFilter.Matches("notv0.34.3,t2",false,"0.34.3",null), "compact tag keys match only at token boundaries");
+        Check(BrowserServerFilter.Matches("v0.34.3,t=2",false,"0.34.3","2"), "mixed legacy and compact tag formats are supported");
     }
     private static void FavouriteChecks()
     {
@@ -312,14 +458,16 @@ internal static class Program
     {
         using var fixture = JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory,"NativeBrowserLayout.json")));
         var native = fixture.RootElement;
-        string gameAssembly = Path.Combine(gameDir,"NuclearOption_Data","Managed","Assembly-CSharp.dll");
-        using var stream = File.OpenRead(gameAssembly);
-        Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream))==native.GetProperty("gameAssemblyHash").GetString(), "layout fixture belongs to the installed game assembly");
+        string sceneAsset = Path.Combine(gameDir,"NuclearOption_Data","level2");
+        using var stream = File.OpenRead(sceneAsset);
+        Check(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(stream))==native.GetProperty("assetSha256").GetString(), "layout fixture belongs to the installed browser scene asset");
         var scroll = native.GetProperty("scrollRoot");
         var viewport = native.GetProperty("viewport");
         Check(viewport.GetProperty("m_AnchorMax").GetProperty("x").GetSingle()==0 && viewport.GetProperty("m_SizeDelta").GetProperty("x").GetSingle()==0, "native viewport starts collapsed before automatic layout - reproduces 0.3.0 failure");
         Check(scroll.GetProperty("m_AnchorMin").GetProperty("x").GetSingle()==0 && scroll.GetProperty("m_AnchorMax").GetProperty("x").GetSingle()==1 && scroll.GetProperty("m_AnchorMax").GetProperty("y").GetSingle()==1, "outer native scroll view stretches across the list and starts at its top");
         var ui = client.MainModule.GetType("KellysJOINCHECK.BrowserUi");
+        var clear = ui.Methods.Single(m=>m.Name=="ClearPreviousVersionResults").Body.Instructions;
+        Check(clear.Any(i=>i.Operand is MethodReference m&&m.Name=="Hide"&&m.DeclaringType.Name=="LobbyListItem") && clear.Any(i=>i.Operand is MethodReference m&&m.Name=="Push") && clear.Any(i=>i.Operand is MethodReference m&&m.Name=="Remove"), "version filter changes return old native rows to the pool before searching again");
         var uiCode = AllTypes(new[]{ui}).SelectMany(t=>t.Methods).Where(m=>m.HasBody).SelectMany(m=>m.Body.Instructions).ToArray();
         Check(!uiCode.Any(i=>i.Operand is MethodReference m && new[]{"get_viewport","set_verticalScrollbarVisibility","set_horizontalScrollbarVisibility"}.Contains(m.Name)), "browser leaves native viewport and scrollbar sizing untouched");
         Check(ui.Fields.Any(f=>f.Name=="scrollBounds") && !ui.Fields.Any(f=>f.Name=="viewport"), "reserved toolbar space belongs to outer scroll view instead of zero-sized viewport");
@@ -424,3 +572,5 @@ internal static class Program
         Check(t != null && t.Methods.Any(m=>m.Name == method && m.ReturnType.FullName == returns && m.Parameters.Select(p=>p.ParameterType.FullName).SequenceEqual(parameters)), "game hook " + type + "." + method);
     }
 }
+
+

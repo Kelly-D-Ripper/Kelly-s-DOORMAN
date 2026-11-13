@@ -4,7 +4,8 @@
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <Version>1.0.0</Version>
+    <Version Condition="'$(ServerBuild)' != 'true'">1.4.0</Version>
+    <Version Condition="'$(ServerBuild)' == 'true'">1.1.0</Version>
     <NuGetAudit>false</NuGetAudit>
     <RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
@@ -13,11 +14,93 @@
     <AssemblyName Condition="'$(ServerBuild)' == 'true'">KellysJOINCHECKServer</AssemblyName>
     <OutputPath>bin\$(Configuration)\$(AssemblyName)\</OutputPath>
     <IntermediateOutputPath>obj\$(Configuration)\$(AssemblyName)\</IntermediateOutputPath>
+    <PathMap>$(MSBuildProjectDirectory)=C:\DOORMAN-SOURCE</PathMap>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="metadata\client\doorman.json" LogicalName="doorman.json" Condition="'$(ServerBuild)' != 'true'" />
+    <EmbeddedResource Include="metadata\client\doorman.png" LogicalName="doorman.png" Condition="'$(ServerBuild)' != 'true' and Exists('metadata\client\doorman.png')" />
     <Compile Include="src\Diagnostics.cs" />
     <Compile Include="src\Compatibility.cs" />
+    <Compile Include="src\GameplayFingerprints.cs" />
+    <Compile Include="src\GameplayFingerprintInventory.cs" />
+    <Compile Include="src\AssetLoadingDiagnostics.cs" />
+    <Compile Include="src\GameplayFingerprintSetup.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ClientGameplayFingerprints.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\GameplayFingerprintUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\GameplayServerSetup.cs" Condition="'$(ServerBuild)' != 'true'" />
     <Compile Include="src\ClientPlugin.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MapJoinDiagnostic.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerMapUpdates.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\IronjawPackageUpdates.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerMapResolver.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerMapWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ChecklistCursor.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModData.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModRequisiteData.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModRequisites.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModRequisiteWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModRequisiteSelection.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\QueuedModRequisiteMetadata.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SavedModLists.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\InstalledContentMetadata.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\InstalledFilePolicy.cs" />
+    <Compile Include="src\ModListWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeModListsUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeScrollbars.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MapFiles.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MapPackageInstaller.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MapBundleBridge.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MapWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeMapsUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\EmbeddedModPreview.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModUpdateData.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModUpdateFiles.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\StandaloneBundleUpdates.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\AutoSetupBatch.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModUpdateService.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SelfUpdatePackage.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SelfUpdateTransaction.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SelfUpdateRelease.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SelfUpdateWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Reference Include="System.Net.Http" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModImageHeader.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModStateSnapshot.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModCatalog.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModMenuEntries.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\AddonRemovalQueue.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\AddonRemovalOwnership.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\AddonRemovalWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NommMetadata.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NosmrReport.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerDownloadResolver.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SavedModVersions.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerDownloadProof.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NommMetadataService.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerSetupData.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerCompatibilityPlugins.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ContentSourceFiles.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SupportReport.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\DisabledModFiles.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\DisabledRestoreQueue.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\DisabledContentMetadata.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\DisabledContentManifestReader.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NommDisabledCatalog.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NommDisabledSelection.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NommDisabledWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\SupportLogTail.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModSupportReport.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ServerModWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModsRestartWorkflow.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\RestartStatus.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\RuntimePlatform.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\WindowsRestartLauncher.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\RestartLaunchFailure.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\BlueprinterReload.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\ModManager.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeModsUi.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\NativeMenuLifecycle.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MainMenuUpdates.cs" Condition="'$(ServerBuild)' != 'true'" />
+    <Compile Include="src\MenuScene.cs" Condition="'$(ServerBuild)' != 'true'" />
     <Compile Include="src\JoinSummary.cs" Condition="'$(ServerBuild)' != 'true'" />
     <Compile Include="src\NativeJoinUi.cs" Condition="'$(ServerBuild)' != 'true'" />
     <Compile Include="src\Favourites.cs" Condition="'$(ServerBuild)' != 'true'" />
@@ -37,6 +120,7 @@
     <Reference Include="com.rlabrecque.steamworks.net" HintPath="$(ManagedDir)\com.rlabrecque.steamworks.net.dll" Private="false" />
     <Reference Include="UnityEngine" HintPath="$(ManagedDir)\UnityEngine.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.AudioModule" HintPath="$(ManagedDir)\UnityEngine.AudioModule.dll" Private="false" />
     <Reference Include="UnityEngine.IMGUIModule" HintPath="$(ManagedDir)\UnityEngine.IMGUIModule.dll" Private="false" />
     <Reference Include="UnityEngine.InputLegacyModule" HintPath="$(ManagedDir)\UnityEngine.InputLegacyModule.dll" Private="false" />
     <Reference Include="UnityEngine.UI" HintPath="$(ManagedDir)\UnityEngine.UI.dll" Private="false" />
@@ -45,8 +129,15 @@
     <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(ManagedDir)\UnityEngine.TextRenderingModule.dll" Private="false" />
     <Reference Include="BepInEx" HintPath="$(GameDir)\BepInEx\core\BepInEx.dll" Private="false" />
     <Reference Include="0Harmony" HintPath="$(GameDir)\BepInEx\core\0Harmony.dll" Private="false" />
+    <Reference Include="Mono.Cecil" HintPath="$(GameDir)\BepInEx\core\Mono.Cecil.dll" Private="false" />
+    <Reference Include="Mirage" HintPath="$(ManagedDir)\Mirage.dll" Private="false" Condition="'$(ServerBuild)' != 'true'" />
+    <Reference Include="Unity.Addressables" HintPath="$(ManagedDir)\Unity.Addressables.dll" Private="false" Condition="'$(ServerBuild)' != 'true'" />
+    <Reference Include="Unity.ResourceManager" HintPath="$(ManagedDir)\Unity.ResourceManager.dll" Private="false" Condition="'$(ServerBuild)' != 'true'" />
+    <Reference Include="UnityEngine.AssetBundleModule" HintPath="$(ManagedDir)\UnityEngine.AssetBundleModule.dll" Private="false" Condition="'$(ServerBuild)' != 'true'" />
+    <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedDir)\UnityEngine.ImageConversionModule.dll" Private="false" Condition="'$(ServerBuild)' != 'true'" />
   </ItemGroup>
   <Target Name="ValidateGameReferences" BeforeTargets="BeforeBuild">
     <Error Condition="!Exists('$(ManagedDir)\Assembly-CSharp.dll')" Text="GameDir must point to an installed Nuclear Option game with BepInEx 5." />
   </Target>
 </Project>
+

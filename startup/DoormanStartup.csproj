@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework><LangVersion>latest</LangVersion><Nullable>enable</Nullable>
+    <AssemblyName>KellysDOORMANStartup</AssemblyName><Version>1.4.0</Version>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..'))=C:\DOORMAN-SOURCE</PathMap>
+    <NuGetAudit>false</NuGetAudit><RestoreIgnoreFailedSources>true</RestoreIgnoreFailedSources>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Nuclear Option</GameDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\src\ModData.cs" Link="ModData.cs" />
+    <Compile Include="..\src\ModRequisiteData.cs" Link="ModRequisiteData.cs" />
+    <Compile Include="..\src\EmbeddedModPreview.cs" Link="EmbeddedModPreview.cs" />
+    <Compile Include="..\src\ModImageHeader.cs" Link="ModImageHeader.cs" />
+    <Compile Include="..\src\ModUpdateData.cs" Link="ModUpdateData.cs" />
+    <Compile Include="..\src\ModUpdateFiles.cs" Link="ModUpdateFiles.cs" />
+    <Compile Include="..\src\StandaloneBundleUpdates.cs" Link="StandaloneBundleUpdates.cs" />
+    <Compile Include="..\src\MapJoinDiagnostic.cs" Link="MapJoinDiagnostic.cs" />
+    <Compile Include="..\src\ServerMapUpdates.cs" Link="ServerMapUpdates.cs" />
+    <Compile Include="..\src\IronjawPackageUpdates.cs" Link="IronjawPackageUpdates.cs" />
+    <Compile Include="..\src\AutoSetupBatch.cs" Link="AutoSetupBatch.cs" />
+    <Compile Include="..\src\StartupUpdatePreflight.cs" Link="StartupUpdatePreflight.cs" />
+    <Compile Include="..\src\SelfUpdateTransaction.cs" Link="SelfUpdateTransaction.cs" />
+    <Compile Include="..\src\Diagnostics.cs" Link="Diagnostics.cs" />
+    <Compile Include="..\src\ServerSetupData.cs" Link="ServerSetupData.cs" />
+    <Compile Include="..\src\DisabledModFiles.cs" Link="DisabledModFiles.cs" />
+    <Compile Include="..\src\InstalledFilePolicy.cs" Link="InstalledFilePolicy.cs" />
+    <Compile Include="..\src\AddonRemovalQueue.cs" Link="AddonRemovalQueue.cs" />
+    <Compile Include="..\src\DisabledRestoreQueue.cs" Link="DisabledRestoreQueue.cs" />
+    <Compile Include="..\src\RestartStatus.cs" Link="RestartStatus.cs" />
+    <Reference Include="BepInEx" HintPath="$(GameDir)\BepInEx\core\BepInEx.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GameDir)\BepInEx\core\0Harmony.dll" Private="false" />
+    <Reference Include="Mono.Cecil" HintPath="$(GameDir)\BepInEx\core\Mono.Cecil.dll" Private="false" />
+    <Reference Include="System.IO.Compression" HintPath="$(GameDir)\NuclearOption_Data\Managed\System.IO.Compression.dll" Private="false" />
+  </ItemGroup>
+</Project>
+

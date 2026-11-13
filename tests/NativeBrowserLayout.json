@@ -1,6 +1,7 @@
 {
-  "gameAssemblyHash": "EB3B93BDAEC37DD7B3BAB72F801A2C84E5BE2AE3C559F39251E2320AE6B11CCC",
+  "gameAssemblyHash": "BABDD626BBAB5F01E6C244150C1E77C57C131EE86967214E2E5CED6D813C2BCE",
   "asset": "NuclearOption_Data/level2",
+  "assetSha256": "502603B2ECF99A4627C407CBC8A40D3B5476EF758800C7384554DC841BFD7BE5",
   "scrollRoot": {
     "m_GameObject": {
       "m_FileID": 0,
@@ -25,16 +26,16 @@
     "m_Children": [
       {
         "m_FileID": 0,
-        "m_PathID": 1658
+        "m_PathID": 1701
       },
       {
         "m_FileID": 0,
-        "m_PathID": 1612
+        "m_PathID": 1655
       }
     ],
     "m_Father": {
       "m_FileID": 0,
-      "m_PathID": 1603
+      "m_PathID": 1646
     },
     "m_AnchorMin": {
       "x": 0.0,
@@ -81,12 +82,12 @@
     "m_Children": [
       {
         "m_FileID": 0,
-        "m_PathID": 1653
+        "m_PathID": 1696
       }
     ],
     "m_Father": {
       "m_FileID": 0,
-      "m_PathID": 1618
+      "m_PathID": 1661
     },
     "m_AnchorMin": {
       "x": 0.0,

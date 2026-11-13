@@ -10,7 +10,67 @@
     <None Update="NativeBrowserLayout.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Remove="HookSmoke\**\*.cs" />
     <Compile Include="..\src\Diagnostics.cs" Link="Diagnostics.cs" />
+    <Compile Include="..\src\GameplayFingerprints.cs" Link="GameplayFingerprints.cs" />
+    <Compile Include="..\src\GameplayFingerprintUi.cs" Link="GameplayFingerprintUi.cs" />
+    <Compile Include="..\src\GameplayFingerprintInventory.cs" Link="GameplayFingerprintInventory.cs" />
+    <Compile Include="..\src\AssetLoadingDiagnostics.cs" Link="AssetLoadingDiagnostics.cs" />
+    <Compile Include="..\src\Compatibility.cs" Link="Compatibility.cs" />
+    <Compile Include="..\src\GameplayFingerprintSetup.cs" Link="GameplayFingerprintSetup.cs" />
+    <Compile Include="..\src\ModData.cs" Link="ModData.cs" />
+    <Compile Include="..\src\ModRequisiteData.cs" Link="ModRequisiteData.cs" />
+    <Compile Include="..\src\ModRequisites.cs" Link="ModRequisites.cs" />
+    <Compile Include="..\src\ModRequisiteSelection.cs" Link="ModRequisiteSelection.cs" />
+    <Compile Include="..\src\QueuedModRequisiteMetadata.cs" Link="QueuedModRequisiteMetadata.cs" />
+    <Compile Include="..\src\ModMenuEntries.cs" Link="ModMenuEntries.cs" />
+    <Compile Include="..\src\AddonRemovalQueue.cs" Link="AddonRemovalQueue.cs" />
+    <Compile Include="..\src\AddonRemovalOwnership.cs" Link="AddonRemovalOwnership.cs" />
+    <Compile Include="..\src\EmbeddedModPreview.cs" Link="EmbeddedModPreview.cs" />
+    <Compile Include="..\src\NommMetadata.cs" Link="NommMetadata.cs" />
+    <Compile Include="..\src\NosmrReport.cs" Link="NosmrReport.cs" />
+    <Compile Include="..\src\ServerDownloadResolver.cs" Link="ServerDownloadResolver.cs" />
+    <Compile Include="..\src\SavedModVersions.cs" Link="SavedModVersions.cs" />
+    <Compile Include="..\src\ServerDownloadProof.cs" Link="ServerDownloadProof.cs" />
+    <Compile Include="..\src\NommMetadataService.cs" Link="NommMetadataService.cs" />
+    <Compile Include="..\src\ServerSetupData.cs" Link="ServerSetupData.cs" />
+    <Compile Include="..\src\ServerCompatibilityPlugins.cs" Link="ServerCompatibilityPlugins.cs" />
+    <Compile Include="..\src\ContentSourceFiles.cs" Link="ContentSourceFiles.cs" />
+    <Compile Include="..\src\DisabledModFiles.cs" Link="DisabledModFiles.cs" />
+    <Compile Include="..\src\DisabledRestoreQueue.cs" Link="DisabledRestoreQueue.cs" />
+    <Compile Include="..\src\DisabledContentMetadata.cs" Link="DisabledContentMetadata.cs" />
+    <Compile Include="..\src\NommDisabledCatalog.cs" Link="NommDisabledCatalog.cs" />
+    <Compile Include="..\src\NommDisabledSelection.cs" Link="NommDisabledSelection.cs" />
+    <Compile Include="..\src\SupportReport.cs" Link="SupportReport.cs" />
+    <Compile Include="..\src\SupportLogTail.cs" Link="SupportLogTail.cs" />
+    <Compile Include="..\src\SavedModLists.cs" Link="SavedModLists.cs" />
+    <Compile Include="..\src\MapFiles.cs" Link="MapFiles.cs" />
+    <Compile Include="..\src\MapPackageInstaller.cs" Link="MapPackageInstaller.cs" />
+    <Compile Include="..\src\SelfUpdatePackage.cs" Link="SelfUpdatePackage.cs" />
+    <Compile Include="..\src\SelfUpdateTransaction.cs" Link="SelfUpdateTransaction.cs" />
+    <Compile Include="..\src\SelfUpdateRelease.cs" Link="SelfUpdateRelease.cs" />
+    <Compile Include="..\src\InstalledContentMetadata.cs" Link="InstalledContentMetadata.cs" />
+    <Compile Include="..\src\InstalledFilePolicy.cs" Link="InstalledFilePolicy.cs" />
+    <Compile Include="..\src\RestartStatus.cs" Link="RestartStatus.cs" />
+    <Compile Include="..\src\RuntimePlatform.cs" Link="RuntimePlatform.cs" />
+    <Compile Include="..\src\RestartLaunchFailure.cs" Link="RestartLaunchFailure.cs" />
+    <Compile Include="..\restart\RestartLaunchPolicy.cs" Link="RestartLaunchPolicy.cs" />
+    <Compile Include="..\restart\SteamSessionState.cs" Link="SteamSessionState.cs" />
+    <Compile Include="..\restart\RestartProcessFamily.cs" Link="RestartProcessFamily.cs" />
+    <Compile Include="..\src\MenuScene.cs" Link="MenuScene.cs" />
+    <Compile Include="..\src\ModUpdateData.cs" Link="ModUpdateData.cs" />
+    <Compile Include="..\src\ModUpdateFiles.cs" Link="ModUpdateFiles.cs" />
+    <Compile Include="..\src\StandaloneBundleUpdates.cs" Link="StandaloneBundleUpdates.cs" />
+    <Compile Include="..\src\AutoSetupBatch.cs" Link="AutoSetupBatch.cs" />
+    <Compile Include="..\src\StartupUpdatePreflight.cs" Link="StartupUpdatePreflight.cs" />
+    <Compile Include="..\src\ModUpdateService.cs" Link="ModUpdateService.cs" />
+    <Compile Include="..\startup\DoormanStartupPatch.cs" Link="DoormanStartupPatch.cs" />
+    <Compile Include="..\startup\DoormanRuntimeHost.cs" Link="DoormanRuntimeHost.cs" />
+    <Compile Include="..\src\ModStateSnapshot.cs" Link="ModStateSnapshot.cs" />
+    <Compile Include="..\src\ModImageHeader.cs" Link="ModImageHeader.cs" />
     <Compile Include="..\src\JoinSummary.cs" Link="JoinSummary.cs" />
+    <Compile Include="..\src\MapJoinDiagnostic.cs" Link="MapJoinDiagnostic.cs" />
+    <Compile Include="..\src\ServerMapUpdates.cs" Link="ServerMapUpdates.cs" />
+    <Compile Include="..\src\IronjawPackageUpdates.cs" Link="IronjawPackageUpdates.cs" />
+    <Compile Include="..\src\ServerMapResolver.cs" Link="ServerMapResolver.cs" />
     <Compile Include="..\src\Advertisement.cs" Link="Advertisement.cs" />
     <Compile Include="..\src\Favourites.cs" Link="Favourites.cs" />
     <Compile Include="..\src\BrowserQueryPatch.cs" Link="BrowserQueryPatch.cs" />
@@ -18,6 +78,12 @@
     <Compile Include="..\src\BrowserIconGeometry.cs" Link="BrowserIconGeometry.cs" />
     <Compile Include="..\src\BrowserServerFilter.cs" Link="BrowserServerFilter.cs" />
     <Reference Include="0Harmony" HintPath="$(GameDir)\BepInEx\core\0Harmony.dll" />
+    <Reference Include="BepInEx" HintPath="$(GameDir)\BepInEx\core\BepInEx.dll" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(GameDir)\NuclearOption_Data\Managed\UnityEngine.CoreModule.dll" />
+    <Reference Include="UnityEngine.AudioModule" HintPath="$(GameDir)\NuclearOption_Data\Managed\UnityEngine.AudioModule.dll" />
+    <Reference Include="Assembly-CSharp" HintPath="$(GameDir)\NuclearOption_Data\Managed\Assembly-CSharp.dll" />
+    <Reference Include="UnityEngine" HintPath="$(GameDir)\NuclearOption_Data\Managed\UnityEngine.dll" />
     <Reference Include="Mono.Cecil" HintPath="$(GameDir)\BepInEx\core\Mono.Cecil.dll" />
   </ItemGroup>
 </Project>
+

@@ -31,6 +31,25 @@ namespace KellysJOINCHECK
             }
             return expected == wire ? expanded : wire;
         }
+        internal static string ForDiagnostics(bool loadingFinished, bool reloadReady, string loadingStatus, out string notice)
+            => ForDiagnostics(loadingFinished, reloadReady, loadingStatus, out notice, out _);
+
+        internal static string ForDiagnostics(bool loadingFinished, bool reloadReady, string loadingStatus, out string notice, out bool wireVerified)
+        {
+            string wire = Wire, verified = wire, loaderVersion = "";
+            string? bundles = null;
+            try
+            {
+                verified = Expanded(wire);
+                if (Chainloader.PluginInfos.TryGetValue("com.nikkorap.blueprinter", out var info))
+                {
+                    loaderVersion = info.Metadata.Version.ToString();
+                    bundles = info.Instance.GetType().GetField("BundlesSignature", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as string;
+                }
+            }
+            catch { /* Preserve raw diagnostics if a loader's metadata is unavailable. */ }
+            return DiagnosticSignature.Select(wire, verified, loaderVersion, bundles, loadingFinished, reloadReady, loadingStatus, out notice, out wireVerified);
+        }
         public static uint? BuildHash()
         {
             var method = HarmonyLib.AccessTools.Method("NuclearOption.Networking.Authentication.NetworkAuthenticatorNuclearOption:GetBuildHash");
